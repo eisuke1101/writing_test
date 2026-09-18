@@ -1,0 +1,62 @@
+@charset "utf-8";
+/* CSS Document */
+
+/*@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');*/ /*webFont => NotSans*/
+@import url("/css/fonts/font_NotoSansJP.min.css");
+
+*{
+    font-family:'century','Times New Roman','Noto Sans JP', "Hiragino kaku Gothic Pro", "ヒラギノ角ゴ Pro W3", 'メイリオ', 'Meiryo UI',Verdana,'ＭＳ Ｐゴシック',sans-serif;
+    font-feature-settings : "palt";
+    box-sizing: border-box;
+}
+
+body{ margin:0px; padding:0px; font-size: 16px; }
+body,h1,h2,h3,h4,h5,h6,td,th,div,p,input,textarea,pre,ul,ol,li,address,header,footer,nav,article,section,aside{
+	color:#4D4D4D;
+	line-height:1em;
+	/*font-family:'メイリオ',"Hiragino kaku Gothic Pro", "ヒラギノ角ゴ Pro W3", 'Meiryo UI',Verdana,'ＭＳ Ｐゴシック',sans-serif;*/
+}
+h1,h2,h3,h4,h5,h6,div,p,ul,ol,li,dl,dt,dd,form,pre,input,textarea,header,footer,nav,article,section,aside{
+	line-height:1.6em;
+	margin:0px;
+	padding:0px;
+	text-align:left;
+	vertical-align:top;
+}
+h1,h2,h3,h4,h5,h6{color:#000;}
+h4,h5,h6{ font-size:120%;}
+p{ padding:2px 0 5px 0; }
+li{list-style:none;}
+dt{font-weight:bold;}
+p,li,dt,dd,th,td,address{line-height:1.8em;}
+address{font-style:normal;}
+header,footer,article,section,aside{display: block;}
+li{list-style:none;}
+table,img{border:0;}
+table td{ vertical-align:top; text-align:left;}
+table th{ vertical-align:middle; text-align:center;}
+table th, table td{ padding:8px;}
+img{ vertical-align:middle;}
+fieldset{ margin:0; padding:0; border:0;}
+strong{ font-weight:bold;}
+.through{ text-decoration:line-through; color:#999;}
+a:link{text-decoration:none; color:#006699;}
+a:visited{text-decoration:none; color:#6668B7;}
+a:hover{text-decoration:none; color:#5B7902; cursor: pointer;}
+a:active{text-decoration:underline; color:#003298;}
+a:focus{outline:none; color:#003298;}
+button:hover{cursor: pointer;}
+.clear{clear:both;}
+.none{display:none;}
+
+noscript{display:none;}
+
+/*----------------------------------------------------------------------------
+***                                                                  clearfix
+----------------------------------------------------------------------------*/
+.clearfix:after{ content: ""; display:block; height:0; clear: both; visibility: hidden; }
+.clearfix{ display: inline-block; }
+/* \Hides from IE-mac\ */
+* html .clearfix{height:1%;}
+.clearfix{ display:block; }
+/* \End hide from IE-mac\ */

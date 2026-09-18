@@ -1,0 +1,246 @@
+@charset "utf-8";
+/* CSS Document */
+
+/*----------------------------------------------------------------------------
+ ***                                                           unitSelectSec
+----------------------------------------------------------------------------*/
+#unitSelectSec #unitSelectSecInner{padding-top: 2em;}
+#unitSelectSec .titleBox{width: 100%;background-color: #e7dde8;border-left: 1em solid #82538d;padding: 1em;margin-bottom: 1em;display: flex; justify-content: space-between; align-items: center;}
+#unitSelectSec .titleBox .secTtl{text-align: left;color:#561866;font-size: 175%;}
+#unitSelectSec .titleBox .topicBtn{padding: 0;}
+#unitSelectSec .titleBox .topicBtn a{text-align: center;color:#561866; background: #fff; font-size: 120%; padding: 0.5em 1.5em; border-radius: 2em;}
+#unitSelectSec .topicBox{margin-top: 2em; padding: 0 1em;}
+#unitSelectSec .topicBox .selectBtn{font-size:120%;padding: 1em;line-height: 1;max-width: 420px; border-radius: 0.5em; margin-bottom:1em;}
+#unitSelectSec .topicBox .selectBtn#submitBtn01{background-color: #001b5b; color: #fff; font-weight: 400;}
+#unitSelectSec .topicBox .selectBtn#submitBtn02{background-color: #b30043; color: #fff; font-weight: 400;}
+#unitSelectSec .topicBox .pullTgt#submitBox01{background: #edf5f9;padding: 1.5em;}
+#unitSelectSec .topicBox .pullTgt#submitBox02{background: #fcf2f7;padding: 1.5em;margin-bottom: 3em;}
+
+#unitSelectSec .topicBox .submit_a #submitBox02 textarea{min-height: 8em;margin-bottom: 1.5em; font-size: 20px;}
+#unitSelectSec .topicBox .submit_a .autosave{margin-right: 0.5em;}
+#unitSelectSec .topicBox .submit_a .autosaveBox{margin-right: auto;}
+#unitSelectSec .topicBox .submit_a .autosaveBox button{font-size: 95%; line-height:1; padding: 0.3em 0.5em;}
+#unitSelectSec .topicBox .submit_a .autosaveBox button:hover{cursor:pointer;}
+
+#unitSelectSec .topicBox .submit_b{margin-bottom: 3em;}
+#unitSelectSec .topicBox .submit_b .fileBtnBox{display: flex; justify-content: space-between;}
+#unitSelectSec .topicBox .submit_b .fileBtnBox input{display: none;}
+#unitSelectSec .topicBox .submit_b .fileBtnBox .txt{display: inline-block;width: max-content;white-space: nowrap;border: 1px solid #b0b0b0;font-size: 100%;padding: 0.3em 0.3em 0.4em 0.3em;line-height: 1;/* Permalink - use to edit and share this gradient: https://colorzilla.com/gradient-editor/#f6f6f6+0,e1e1e1+100 */background: #f6f6f6; /* Old browsers */background: -moz-linear-gradient(top,  #f6f6f6 0%, #e1e1e1 100%); /* FF3.6-15 */background: -webkit-linear-gradient(top,  #f6f6f6 0%,#e1e1e1 100%); /* Chrome10-25,Safari5.1-6 */background: linear-gradient(to bottom,  #f6f6f6 0%,#e1e1e1 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#f6f6f6', endColorstr='#e1e1e1',GradientType=0 ); /* IE6-9 */}
+#unitSelectSec .topicBox .submit_b .fileBtnBox .val{display: inline-block;font-size: 90%;padding: 0.5em 0.3em 0.4em 0.3em;line-height: 1;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;margin: 0 auto 0 1em;line-height: 1;}
+#unitSelectSec .topicBox .submit_b .fileBtnBox .txt:hover,
+#unitSelectSec .topicBox .submit_b .fileBtnBox .val:hover{cursor: pointer;}
+
+/*提出方法Aのバリテーション*/
+#unitSelectSec .topicBox .submit_a #submitBox02{position:relative}
+#unitSelectSec .topicBox .submit_a #submitBox02 .error{display:none;position:absolute;top:-60px;right:2em;font-size:12px;background-color:rgba(255,0,0,.7);color:#fff;padding:10px;text-align:center}
+#unitSelectSec .topicBox .submit_a #submitBox02 .error::before{content:"";position:absolute;bottom:-9px;left:10px;width:0;height:0;border-style:solid;border-width:10px 6px 0 6px;border-color:rgba(255,0,0,.7) transparent transparent transparent}
+
+
+/*トピック一覧（開閉）*/
+#unitSelectSec #topicListBox {display: flex; flex-wrap: wrap;}
+/*inputを非表示*/
+#unitSelectSec #topicListBox input {display: none;}
+
+/*ラベルのスタイル*/
+#unitSelectSec #topicListBox .topicListTtl .Ttl{color:#561866;font-size: 175%; font-weight: bold;}
+/*ボタンのスタイル*/
+#unitSelectSec #topicListBox label.topicListTtl {order:1; width: 100%;background-color: #e7dde8;border-left: 1em solid #82538d;padding: 1.7em 1em;margin-bottom: 1em;display: flex; justify-content: space-between; align-items: center;position: relative;}
+#unitSelectSec #topicListBox label.topicListTtl:hover {cursor:pointer;}
+#unitSelectSec #topicListBox label.topicListTtl:before {content: '一覧を表示する';display: block;padding: 0.5em 1em;width: 9em;text-align: center; border-radius: 2em;background-color: #82538d;position: absolute;right: 1em;top: 50%;transform: translate(0,-50%); color:#fff;font-weight: bold; font-size: 110%;}
+#unitSelectSec #topicListBox .topicListTtl:checked + label.topicListTtl:before {content: '一覧を閉じる';}
+
+/*一覧を非表示*/
+/*#unitSelectSec #topicListBox .listTopicBox {order:3; height: 0; padding: 0; overflow: hidden; opacity: 0; visibility: hidden; position:relative;}*/
+/*checkedのとき表示*/
+#unitSelectSec #topicListBox .topicListTtl:checked + label.topicListTtl + .listTopicBox {height: auto;opacity: 1;visibility: visible;width: 100%; margin: 1em;}
+
+/*中身のスタイル*/
+#unitSelectSec .topicDetailBox{padding:0 1em;}
+#unitSelectSec .topicUl,
+#unitSelectSec .topicLi,
+#unitSelectSec .topicDl{width:100%;}
+#unitSelectSec .topicDt{width:100%;font-size:150%;font-weight:600;color:#561866;}
+#unitSelectSec .topicDd{border:1px solid #82538d;}
+#unitSelectSec .listTopic .sectionInner{display:flex;justify-content:space-between;border-bottom:1px dashed #82538d;}
+#unitSelectSec .listTopic:last-child .sectionInner{border-bottom:none;}
+#unitSelectSec .listTopic .sectionInner h4{order:1;width:40%;font-size:110%;display:flex;justify-content:flex-start;align-items:center;padding:.5em 1em;color:#561866;background-color:#f8f5f8;}
+#unitSelectSec .listTopic .sectionInner p{order:2;width:calc(60% - 6em);padding:1em;line-height:1.4;margin-right: auto;}
+#unitSelectSec .listTopic .sectionInner p b{color:#b40044;}
+#unitSelectSec .listTopic .sectionInner .kuwasikuBtn{order:3;width:6em;display:flex;justify-content:flex-start;align-items:center;padding:.5em 1em;transition:opacity .3s ease;}
+#unitSelectSec .listTopic .sectionInner p.kuwasikuBtn:hover{opacity:.7;}
+
+#unitSelectSec .backNumberBtnBox{order:4;display:flex;justify-content:center;margin:1em auto 3em 1em;}
+#unitSelectSec .backNumberBtn{display:block;border:1px solid #561866;padding:.5em 2em;border-radius:2em;color:#561866;font-weight:600}
+
+/*その他*/
+#unitSelectSec #topicListBox .txt{order:2; padding: 0 1em;}
+
+
+
+/*----------------------------------------------------------------------------
+ ***                                                          topicDetailSec
+----------------------------------------------------------------------------*/
+#topicDetailSec #topicDetailSecInner{padding: 2em 0 0;}
+#topicDetailSec .titleBox{width: 100%; background-color: #e7dde8; border-left: 1em solid #82538d; padding: 1.5em 1em; margin-bottom: 1em; display: flex; justify-content: space-between; align-items: center;font-size: 90%;}
+#topicDetailSec .titleBox .secTtl{text-align: left;color: #561866;font-size: 200%;font-weight: 600;line-height: 1.2;}
+#topicDetailSec .bottomTxtTitle{padding: 0 0.8em; color: #561866; font-size: 120%; font-weight: bold;}
+#topicDetailSec .bottomTxt {padding: 0 1em;margin-bottom: 1em;}
+
+#topicDetailSec .topicDetailBox{padding: 0 1em;}
+#topicDetailSec .topicUl,
+#topicDetailSec .topicLi,
+#topicDetailSec .topicDl{width: 100%;}
+#topicDetailSec .topicDt{width: 100%;font-size: 150%; font-weight: 600; color: #561866;}
+#topicDetailSec .topicDd{border: 1px solid #82538d;margin-bottom: 2em;}
+#topicDetailSec .listTopic .sectionInner{display: flex; justify-content: space-between; border-bottom: 1px dashed #82538d;min-height: 4em;}
+#topicDetailSec .listTopic:last-child .sectionInner{border-bottom: none;}
+#topicDetailSec .listTopic .sectionInner h4{order: 1; width: 45%; font-size: 110%; display: flex; justify-content: flex-start; align-items: center;padding:0.5em 1em 0.5em 3em; color: #561866; background-color: #f8f5f8;position: relative;}
+#topicDetailSec .freeTopicBox .listTopic .sectionInner h4{padding-left: 1em;}
+#topicDetailSec .listTopic .sectionInner h4 .topicNum{display:block;width:2em;height:2em;text-align:center;line-height:2;background-color:#917591;z-index:1;font-size:85%;position:absolute;left:0.8em;top:50%;transform:translateY(-50%);color:#fff;font-weight:600}
+#topicDetailSec .pickupTopic{border: 5px solid #e7dde8;}
+#topicDetailSec .listTopic .sectionInner h4 .ttlEn{display: inline;}
+#topicDetailSec .listTopic .sectionInner h4 .ttlJp{display: inline-block; min-width: 50%;}
+/*#topicDetailSec .listTopic .sectionInner h4  .ttlEn,
+#topicDetailSec .listTopic .sectionInner h4  .ttlJp{display: block;}*/
+#topicDetailSec .pickupTopic .listTopic .sectionInner{flex-wrap:wrap;}
+#topicDetailSec .pickupTopic .listTopic .sectionInner h4{width:100%;padding: 1em;}
+#topicDetailSec .listTopic .sectionInner p{order: 2; width: calc(55% - 7em); padding: 0.5em 0 0.5em 0.7em; line-height: 1.2; font-size: 110%;}
+#topicDetailSec .listTopic .sectionInner p .topicJp{font-size: 80%;}
+#topicDetailSec .listTopic .sectionInner p b{color: #b40044;}
+#topicDetailSec .listTopic .sectionInner .kuwasikuBtn{order: 3; width: auto; display: flex; justify-content: flex-start; align-items: center;padding: 0.5em 1em;transition:opacity .3s ease;}
+#topicDetailSec .listTopic .sectionInner p.kuwasikuBtn:hover{opacity:.7;}
+#topicDetailSec .backNumberBtnBox {display: flex;justify-content: center;}
+#topicDetailSec .backNumberBtn {display: block;border: 1px solid #561866;padding: 0.5em 2em;border-radius: 2em;color: #561866;font-weight: 600;}
+#topicDetailSec .topTopicBox{padding: 0 1em;}
+
+/* #topicDetailSec .backNumberBox{margin-top:5em;} */
+#topicDetailSec .backNumberLi {margin-bottom:1em;}
+#topicDetailSec .backNumberLi:last-child {margin-bottom: 0;}
+#topicDetailSec .backNumberLi label {display: block;font-size: 120%;font-weight: bold;color: #561877;transition: all .5s;width: auto;position: relative;padding: 0.7em 2.7em 0.7em 1em;border: 1px solid #82538d;}
+#topicDetailSec .backNumberLi label:hover {cursor:pointer;}
+#topicDetailSec .backNumberLi input {display: none;}
+
+#topicDetailSec .backNumberLi label:before {content: '';display: block;width: 15px;height: 3px;border-radius: 5px;background-color: #82538d;position: absolute;right: 1em;top: 50%;transform: translateY(-50%) rotate(90deg);transition: all ease 0.3s;}
+#topicDetailSec .backNumberLi label:after {content: '';display: block;width: 15px;height: 3px;border-radius: 5px;background-color: #82538d;position: absolute;right: 1em;top: 50%;transform: translateY(-50%);}
+
+#topicDetailSec .backNumberLi .bnDetail {height: 0; padding: 0; overflow: hidden; opacity: 0; visibility: hidden; position:relative;}
+#topicDetailSec .backNumberLi .question:checked + label + .bnDetail {height: auto;background: #fff;opacity: 1;padding: 0;background-color: #fff;visibility: visible;width: auto;border: 1px solid #82538d;border-top: none;}
+#topicDetailSec .backNumberLi .bnDetail:before {content:'A.';font-size: 1.2em;color:#ee93ad;font-weight:bold;display:block;position:absolute;left: 1em;left: 1.em;}
+#topicDetailSec .backNumberLi .question:checked + label:before { transform: translateY(-50%) rotate(0);}
+
+
+/*----------------------------------------------------------------------------
+ ***                                                          topicListBox
+----------------------------------------------------------------------------*/
+#topicListBox{/*margin-bottom: 3em;*/}
+#topicListBox .titleBox{width: 100%;background-color: #e7dde8;border-left: 1em solid #82538d;padding: 1em 1em 1em 4em;display: flex;justify-content: space-between;align-items: center;font-size: 90%;position: relative;}
+#topicListBox .titleBox .secTtl{text-align: left;color:#561866;font-size: 175%;position: relative;}
+#topicListBox .titleBox .category{background: #eee9ef;color:#561866;padding: 0 0.5em;border-radius: 5px;position: absolute;bottom: -1em;right: 0;transform: translateY(100%);margin: 0;}
+
+#topicListBox .titleBox .topicNum{display:block;width:2em;height:2em;text-align:center;line-height:2;background-color:#917591;z-index:1;font-size: 70%;position:absolute;left: -2.5em;top:50%;transform:translateY(-50%);color:#fff;font-weight:600}
+#topicListBox .titleBox .submitBtnBox{margin-left: 1em;}
+#topicListBox .titleBox .ttlEn{display: inline;}
+#topicListBox .titleBox .ttlJp{display: inline-block;}
+#topicListBox .weeklyTopicBox{padding: 1em;/* border-bottom: 1px dashed #82538d;*/}
+#topicListBox .topiclistLi:last-child .weeklyTopicBox{border-bottom: none;}
+#topicListBox .introDt,
+#topicListBox .egBox .egDt{font-size: 130%; font-weight: bold;}
+#topicListBox .introDt.topic{}
+#topicListBox .introDt.point{color: #b30043;}
+#topicListBox .egBox .egDt{color: #001b5b;}
+#topicListBox .introDd{font-size: 110%; line-height: 1.4; margin-bottom: 1em;}
+#topicListBox .introDd .theme{color: #ff0000;font-weight: bold;text-decoration: underline;}
+#topicListBox .blackboardBox{background:#f8f5f8;padding: 1em;margin: 1em 0 2em 0;}
+#topicListBox .blackboardBox .english{padding: 0.5em 0.5em 1em 0.5em;border-bottom: 1px solid #ccc;line-height: 1.4;}
+#topicListBox .blackboardBox .pointBox{padding: 1em 0.5em 0.5em 0.5em;}
+#topicListBox .blackboardBox .pointBox .pointDt{font-size:110%; color: #c40843;}
+#topicListBox .egSentenceBox{background:#f5f5f5;padding: 1em 1.5em;margin: 0.5em 0 0.5em;}
+#topicListBox .egSentenceBox .egSentence{font-size: 110%; line-height: 1.4;}
+#topicListBox .backBtnBox{margin-top: 2em;}
+#topicListBox .backBtnBox a{display: block; width: 12em; margin: 0 auto; padding: 0.5em; border-radius: 0.5em; color:#fff; background: #aaa; text-align: center;}
+
+#topicListBox .topiclistUl label {display: block;font-size: 1em;color: #314f4d;transition: all .5s;width: auto;position: relative;padding: 0em 2.7em 0em 0em;border-bottom: 1px dashed #82538d;}
+#topicListBox .topiclistUl .topiclistLi:last-child label{border-bottom:none;}
+#topicListBox .topiclistUl label:hover {cursor:pointer;}
+#topicListBox .topiclistUl input {display: none;}
+
+#topicListBox .topiclistUl label:before {content: '';display: block;width: 15px;height: 3px;border-radius: 5px;background-color: #82538d;position: absolute;right: 1em;top: 50%;transform: translateY(-50%) rotate(90deg);transition: all ease 0.3s;}
+#topicListBox .topiclistUl label:after {content: '';display: block;width: 15px;height: 3px;border-radius: 5px;background-color: #82538d;position: absolute;right: 1em;top: 50%;transform: translateY(-50%);}
+
+#topicListBox .topiclistUl li .weeklyTopicBox {height: 0; padding: 0; overflow: hidden; opacity: 0; visibility: hidden; position:relative;}
+#topicListBox .topiclistLi .topicTheme:checked + label + .weeklyTopicBox {height: auto;background: #fff;opacity: 1;padding: 1.5em;visibility: visible;width: auto;}
+#topicListBox .topiclistLi:last-child .topicTheme:checked + label {border-bottom: 1px dashed #82538d;}
+#topicListBox .topiclistLi .topicTheme:checked + label:before { transform: translateY(-50%) rotate(0);}
+
+/*印刷用差分*/
+@media print{
+  #headerArea,
+  #breadcrumbArea,
+  .topBox,
+  #formBox,
+  #footerMenu {display: none;}
+
+  #underFirstViewSec .underFirstViewContent {width: 100%;max-width: 900px;height: auto;margin: 0 auto;} 
+  
+  .secBox > .sectionInner{width: 100%;}
+  
+  #underFirstViewSec,
+  #underFirstViewSec #underFirstViewSecInner{width: 100%;}
+  
+  /*#topicListBox .egSentenceBox{border-top:1px solid #82538d; backgorund:none; padding: 1em 0 0 0;}*/
+}
+
+/*----------------------------------------------------------------------------
+ ***                                                         topicKobetsuSec
+----------------------------------------------------------------------------*/
+#topicKobetsuSec .sectionInner{padding: 2em 0 0;}
+#topicKobetsuSec .titleBox{margin-bottom: 0;}
+
+/*----------------------------------------------------------------------------
+ ***                                                                 infoSec
+----------------------------------------------------------------------------*/
+#infoSec {padding: 1em;}
+#infoSec #infoTb table{width: 100%; border: 2px solid #ccc;}
+#infoSec #infoTb table th{background-color: #f2f2f2;}
+#infoSec #infoTb table td{background-color: #fff;padding: 1em;}
+#infoSec #infoTb input[type=text]{min-width: 200px; font-size: 16px;}
+#infoSec #infoTb input[type=checkbox]{display: inline-block; margin-right: 0.5em;}
+#infoSec #infoTb label,
+#infoSec #infoTb input[type=checkbox],
+#infoSec #infoTb input[type=radio]{cursor: pointer;}
+#infoSec #infoTb #submit-area .btn{font-size: 120%; padding: 0.2em}
+#infoSec #infoTb #submit-area .btn:hover{cursor: pointer;}
+
+
+/*----------------------------------------------------------------------------
+ ***                                                           sampleInfoBox
+----------------------------------------------------------------------------*/
+#sampleInfoBox .btn a{display: block; width: 90%; max-width: 14em; padding: 0.5em 1em; text-align: center; color:#82538d; border: 1px solid #82538d; border-radius: 0.5em; font-size: 110%; background-color:#f8f5f8;}
+#sampleInfoBox .txt{font-size: 95%;}
+
+
+/*----------------------------------------------------------------------------
+ ***                                                                errorSec
+----------------------------------------------------------------------------*/
+/*----- 【エラー画面】 -----*/
+#errorSec .secTtl{color: #b30043;}
+#errorSec table,
+#errorSec tr,
+#errorSec th,
+#errorSec td{border: none; padding: 0.5em;}
+#errorSec input{display: block; width: 90%; width: 5em; padding: 0.5em 1em; margin:3em auto; text-align: center;}
+#errorSec input:hover{cursor: pointer;}
+
+
+/*----------------------------------------------------------------------------
+ ***                                                              confirmSec
+----------------------------------------------------------------------------*/
+/*----- 【確認画面】 -----*/
+#confirmSec .secTtl{color: #b30043;}
+
+/*----------------------------------------------------------------------------
+ ***                                                               thanksSec
+----------------------------------------------------------------------------*/
+/*----- 【完了画面】 -----*/
+#thanksSec .secTtl{color: #b30043;}
+#thanksSec .backFormBtn a{display: block; width: 90%; max-width: 14em; padding: 0.5em 1em; margin:3em auto; text-align: center; color:#82538d; border: 1px solid #82538d; border-radius: 0.5em; font-size: 110%; background-color:#f8f5f8;}
