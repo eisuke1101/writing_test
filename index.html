@@ -717,51 +717,76 @@ function set_form_val(a){a=document.querySelectorAll("form input");for(var c=nul
     const gasUrl = "https://script.google.com/macros/s/AKfycbyZI_HixcbDBdU6BqVpoAf1dKxD2NUmdYhGrlw0o15oUCVseQLenH0wit5RpizsoBjX/exec"; 
     -->
 <script>
-// HTMLがすべて読み込まれた後に実行する
-$(function() {
-    // 送信ボタンがクリックされた時の処理
-    $('#submit-btn').on('click', function(e) {
-        // 通常の送信処理を強制ストップ
+$(function() {$('#submit-btn').on('click', function(e) {
         e.preventDefault();
 
         const form = document.getElementById('inpost');
-        const $btn = $(this);
-        const $msgBox = $('#message-box');
-        
-        // ★GASのWebアプリURLをここに貼り付けてください
-<!--    const gasUrl = "https://script.google.com/macros/s/AKfycbyHu1Pmufz3P-Al78geAvnPsBvb95-LnMIvxGAa5jOeTCieW2w-kO6q7wFUimmd6NQn/exec"; -->
-        const gasUrl = "https://script.google.com/macros/s/AKfycbyZI_HixcbDBdU6BqVpoAf1dKxD2NUmdYhGrlw0o15oUCVseQLenH0wit5RpizsoBjX/exec"; 
+        const $btn =$(this);
+        const $msgBox =$('#message-box');
+        const gasUrl = "【GASのWebアプリURL】"; 
 
-        // ボタンを無効化
         $btn.prop('disabled', true).val('送信中...');
         $msgBox.hide();
 
-        // 送信データの準備
         const formData = new FormData(form);
         const params = new URLSearchParams();
+        
+        // ファイル要素の取得
+        const fileInput = document.getElementById('selectFile');
+        const file = fileInput.files[0];
+
+        // テキストデータのセット
         for (const pair of formData.entries()) {
-            // ファイルデータは除外
-            if (pair[1] instanceof File) continue;
+            if (pair[1] instanceof File) continue; // ファイルは別途処理
             params.append(pair[0], pair[1]);
         }
 
-        // Fetch APIでGASへ送信
-        fetch(gasUrl, {
-            method: 'POST',
-            mode: 'no-cors', // ローカルテスト用のCORS回避
-            body: params
-        })
-        .then(() => {
-            form.reset();
-            $msgBox.css('color', 'green').text('送信が完了しました。').show();
-        })
-        .catch(error => {
-            console.error('Fetch Error:', error);
-            $msgBox.css('color', 'red').text('送信エラーが発生しました。').show();
-        })
-        .finally(() => {
-            $btn.prop('disabled', false).val(' 送信内容確認画面へ ');
-        });
+        // ファイルが選択されている場合の処理
+        if (file) {
+            // 容量チェック (2MB = 2,097,152バイト)
+            if (file.size > 2 * 1024 * 1024) {
+                alert("ファイル容量は2MB以下にしてください。");
+                $btn.prop('disabled', false).val(' 送信内容確認画面へ ');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // ファイルデータをBase64文字列に変換してパラメータに追加
+                const data = e.target.result.split(',');
+                params.append('fileName', file.name);
+                params.append('mimeType', data[0].match(/:(.*?);/)[1]);
+                params.append('fileData', data[1]);
+                
+                sendData(params);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // ファイルがない場合はそのまま送信
+            sendData(params);
+        }
+
+        // GASへの送信処理
+        function sendData(paramsToSend) {
+            fetch(gasUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: paramsToSend
+            })
+            .then(() => {
+                form.reset();
+                // 画面上の「ファイル選択名」の表示もリセット
+                $('#fileLabel .val').text('ファイル未選択'); 
+                $msgBox.css('color', 'green').text('送信が完了しました。').show();
+            })
+            .catch(error => {
+                console.error('Fetch Error:', error);
+                $msgBox.css('color', 'red').text('送信エラーが発生しました。').show();
+            })
+            .finally(() => {
+                $btn.prop('disabled', false).val(' 送信内容確認画面へ ');
+            });
+        }
     });
 });
 </script>
