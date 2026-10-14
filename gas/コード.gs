@@ -212,6 +212,24 @@ function importAnswers() {
 // --------------------------------------------------
 // 提出者チェック
 // --------------------------------------------------
+
+/**
+ * ★追加：単語数から「何回分の提出か」を算出する
+ * 1〜215語:1回分 / 216〜415語:2回分 / 416〜615語:3回分 / 以降200語ごとに+1回分
+ */
+function calcSubmitUnits(wordCount) {
+  const wc = Number(wordCount) || 0;
+  return Math.max(1, Math.ceil((wc - 15) / 200));
+}
+
+/**
+ * ★追加：「回数分」の値を数値で返す（空欄・不正値は1回分として扱う）
+ */
+function toSubmitUnits(value) {
+  const n = parseInt(value, 10);
+  return n >= 1 ? n : 1;
+}
+
 function checkSubmitter() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName("提出作業シート");
@@ -291,7 +309,8 @@ function checkSubmitter() {
         if (!historyMap[key]) {
           historyMap[key] = 0;
         }
-        historyMap[key]++;
+        // ★変更：レコード数ではなく J列「回数分」を合計（空欄は1回分）
+        historyMap[key] += toSubmitUnits(historyData[i][9]);
       }
     }
   } else {
@@ -306,12 +325,17 @@ function checkSubmitter() {
 
   const currentYearMonth = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}`;
 
-  // ★修正：J列（出力）まで一括で取得するため、列数を9から10に変更
-  const targetRange = sheet.getRange(startRow, 1, lastRow - startRow + 1, 10);
+  // ★修正：K列（回数分）まで一括で取得するため、列数を11に変更
+  const targetRange = sheet.getRange(startRow, 1, lastRow - startRow + 1, 11);
   const targetData = targetRange.getValues();
 
-  // ★追加：単語数の上限（この値以上で赤色表示）と警告用の色
-  const WORD_LIMIT = 216;
+  // ★追加：K列の見出しが空なら設定
+  if (sheet.getRange(1, 11).getValue() === "") {
+    sheet.getRange(1, 11).setValue("回数分");
+  }
+
+  // ★変更：複数回分の提出は要確認としてマゼンタ表示、本文重複はエラーとして赤色表示
+  const MULTI_COLOR = "#ff00ff";
   const ALERT_COLOR = "#ff0000";
 
   // ★追加：提出作業シートの処理済（J列が空欄でない）行の本文も重複チェック用に登録
@@ -324,7 +348,7 @@ function checkSubmitter() {
     }
   }
 
-  const overWordRows = [];   // 単語数オーバーの行
+  const multiUnitRows = [];  // 複数回分の提出の行
   const duplicateRows = [];  // 本文重複の行
 
   let processCount = 0;
@@ -348,16 +372,11 @@ function checkSubmitter() {
     }
 
     const wordCount = content === "" ? 0 : content.split(/\s+/).length;
-    const wordCell = sheet.getRange(startRow + i, 8);
-    wordCell.setValue(wordCount);
+    sheet.getRange(startRow + i, 8).setValue(wordCount);
 
-    // ★追加：単語数が上限以上なら H列を赤色に（再実行時に解消していれば色を戻す）
-    if (wordCount >= WORD_LIMIT) {
-      wordCell.setBackground(ALERT_COLOR);
-      overWordRows.push(`${startRow + i}行目（${wordCount}語）`);
-    } else {
-      wordCell.setBackground(null);
-    }
+    // ★追加：単語数から回数分を算出し K列に記録
+    const units = calcSubmitUnits(wordCount);
+    sheet.getRange(startRow + i, 11).setValue(units);
 
     // ★追加：本文が処理済の行と同一なら E列を赤色に（再実行時に解消していれば色を戻す）
     const contentCell = sheet.getRange(startRow + i, 5);
@@ -374,11 +393,12 @@ function checkSubmitter() {
     if (email !== "" && targetMonth !== "") {
       const key = `${email}_${targetMonth}`;
       const previousCount = historyMap[key] || 0;
-      currentCount = previousCount + 1;
+      currentCount = previousCount + 1; // G列は開始回（例：3回目〜4回目なら3）
 
       sheet.getRange(startRow + i, 7).setValue(currentCount);
 
-      historyMap[key] = currentCount;
+      // ★変更：次回の回数は今回の回数分を加算して判定
+      historyMap[key] = previousCount + units;
     }
 
     if (email !== "" && masterMap[email]) {
@@ -387,21 +407,43 @@ function checkSubmitter() {
       sheet.getRange(startRow + i, 2).setNumberFormat('@').setValue(info.id);
       sheet.getRange(startRow + i, 3).setValue(info.name);
 
-      const finalFileName = `${info.fileName}${currentCount} ${dateStr}`;
+      // ★変更：2回分以上なら末尾に「×N」を付与
+      const unitSuffix = units >= 2 ? `×${units}` : "";
+      const finalFileName = `${info.fileName}${currentCount} ${dateStr}${unitSuffix}`;
       sheet.getRange(startRow + i, 9).setValue(finalFileName);
+    }
+
+    // ★変更：複数回分の提出は H列（単語数）・I列（ファイル名）・K列（回数分）をマゼンタにして見落とし防止
+    // 再実行時に1回分へ戻った場合は色を戻す
+    const highlightCells = sheet.getRangeList([
+      `H${startRow + i}`, `I${startRow + i}`, `K${startRow + i}`
+    ]);
+    if (units >= 2) {
+      highlightCells.setBackground(MULTI_COLOR).setFontWeight("bold");
+      const label = currentCount !== "" ? `${currentCount}〜${currentCount + units - 1}回目` : "回数不明";
+      multiUnitRows.push(`${startRow + i}行目：${wordCount}語 → ×${units}（${label}）`);
+    } else {
+      highlightCells.setBackground(null).setFontWeight("normal");
     }
 
     processCount++;
   }
-  // ★追加：警告対象の行があればポップアップで通知
-  let message = `提出者チェックおよび各種自動入力が完了しました（対象: ${processCount}件）。`;
-  if (overWordRows.length > 0) {
-    message += `\n\n【単語数が${WORD_LIMIT}語以上】\n` + overWordRows.join('\n');
-  }
+  // ★変更：要確認・エラーの行を先頭に表示し、見落としを防ぐ
+  const notices = [];
   if (duplicateRows.length > 0) {
-    message += `\n\n【処理済の本文と同一】\n` + duplicateRows.join('\n');
+    notices.push(`■ エラー：処理済の本文と同一（赤色） ${duplicateRows.length}件\n` + duplicateRows.join('\n'));
   }
-  SpreadsheetApp.getUi().alert(message);
+  if (multiUnitRows.length > 0) {
+    notices.push(`■ 要確認：複数回分の提出（マゼンタ） ${multiUnitRows.length}件\n` + multiUnitRows.join('\n'));
+  }
+
+  const ui = SpreadsheetApp.getUi();
+  const summary = `提出者チェックおよび各種自動入力が完了しました（対象: ${processCount}件）。`;
+  if (notices.length > 0) {
+    ui.alert('提出者チェック：確認が必要な行があります', notices.join('\n\n') + '\n\n' + summary, ui.ButtonSet.OK);
+  } else {
+    ui.alert(summary);
+  }
 }
 
 // --------------------------------------------------
@@ -432,8 +474,14 @@ function exportToGoogleDocs() {
     return;
   }
 
-  const dataRange = sheet.getRange(startRow, 1, lastRow - startRow + 1, 10);
+  // ★変更：K列（回数分）まで取得
+  const dataRange = sheet.getRange(startRow, 1, lastRow - startRow + 1, 11);
   const data = dataRange.getValues();
+
+  // ★追加：提出履歴J列の見出しが空なら設定
+  if (historySheet.getRange(1, 10).getValue() === "") {
+    historySheet.getRange(1, 10).setValue("回数分");
+  }
 
   const folderId = "1fKDisMbD2IE4wUIp4rIlEM5ysgTJyzvw"; // ここにフォルダIDを入力している場合
   let folder = DriveApp.getRootFolder();
@@ -467,10 +515,12 @@ function exportToGoogleDocs() {
     const wordCount = row[7];
     const specifiedName = row[8];
     const outputStatus = row[9];
+    const units = row[10] === "" ? calcSubmitUnits(row[7]) : toSubmitUnits(row[10]); // K列：回数分
 
     if (outputStatus === "済") continue;
     if (id === "" || content === "" || targetMonth === "" || count === "") continue;
-    if (wordCount === "" || isNaN(wordCount) || Number(wordCount) > 200) continue;
+    // ★変更：単語数の上限を撤廃（複数回分の提出として出力する）
+    if (wordCount === "" || isNaN(wordCount) || Number(wordCount) <= 0) continue;
 
     let fileName = specifiedName;
     if (!fileName || fileName === "") {
@@ -508,7 +558,8 @@ function exportToGoogleDocs() {
       targetMonth,
       sysDateTime, // ★変更箇所：日時（時分秒つき）を書き込み
       "",          // H列：生徒返送日（返送メール送信時に記入）
-      content      // ★追加：I列に本文を保存（提出者チェックの重複判定に使用）
+      content,     // ★追加：I列に本文を保存（提出者チェックの重複判定に使用）
+      units        // ★追加：J列に回数分を保存（次回の回数判定・集計に使用）
     ]);
 
     const lastRowHistory = historySheet.getLastRow();
@@ -570,10 +621,14 @@ function aggregateHistory() {
     }
 
     if (sendDateStr !== "") {
-      historyMap[kanriNo].push({
-        date: sendDateStr,
-        isReturned: returnDate !== ""
-      });
+      // ★変更：J列「回数分」の数だけ同じ日付を並べる（空欄は1回分）
+      const units = toSubmitUnits(historyData[i][9]);
+      for (let u = 0; u < units; u++) {
+        historyMap[kanriNo].push({
+          date: sendDateStr,
+          isReturned: returnDate !== ""
+        });
+      }
     }
   }
 
