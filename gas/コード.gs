@@ -253,26 +253,38 @@ function checkSubmitter() {
   const masterMap = {};
   for (let i = 1; i < masterData.length; i++) {
     const row = masterData[i];
-    const email = String(row[6]).trim(); // G列
-    if (email !== "") {
-      masterMap[email] = {
-        kanriNo: row[1], // B列
-        name: row[2],    // C列
-        id: String(row[4]).padStart(8, '0'), // E列 (8桁0埋め)
-        fileName: row[20]// U列
-      };
+    const info = {
+      kanriNo: row[1], // B列
+      name: row[2],    // C列
+      id: String(row[4]).padStart(8, '0'), // E列 (8桁0埋め)
+      fileName: row[20]// U列
+    };
+    // ★変更：G・H・I列のいずれかのメールアドレスで一致すればよいよう、3列すべてをキーとして登録
+    for (let c = 6; c <= 8; c++) {
+      const email = String(row[c]).trim();
+      if (email !== "" && !masterMap[email]) {
+        masterMap[email] = info;
+      }
     }
   }
 
   // 提出履歴の集計
   const historySheet = ss.getSheetByName("提出履歴");
   const historyMap = {};
+  // ★追加：重複チェック用（正規化した本文 → 最初に見つかった場所）
+  const processedContentMap = {};
 
   if (historySheet) {
     const historyData = historySheet.getDataRange().getValues();
     for (let i = 1; i < historyData.length; i++) {
       const hEmail = String(historyData[i][3]).trim(); // D列
       const hMonth = String(historyData[i][5]).trim(); // F列
+
+      // ★追加：I列の本文を重複チェック用に登録
+      const hContent = normalizeText(String(historyData[i][8] || ""));
+      if (hContent && !processedContentMap[hContent]) {
+        processedContentMap[hContent] = `提出履歴 ${i + 1}行目`;
+      }
 
       if (hEmail !== "" && hMonth !== "") {
         const key = `${hEmail}_${hMonth}`;
@@ -298,6 +310,23 @@ function checkSubmitter() {
   const targetRange = sheet.getRange(startRow, 1, lastRow - startRow + 1, 10);
   const targetData = targetRange.getValues();
 
+  // ★追加：単語数の上限（この値以上で赤色表示）と警告用の色
+  const WORD_LIMIT = 216;
+  const ALERT_COLOR = "#ff0000";
+
+  // ★追加：提出作業シートの処理済（J列が空欄でない）行の本文も重複チェック用に登録
+  // 空白・改行の違いは無視して比較する（normalizeTextを使用）
+  for (let i = 0; i < targetData.length; i++) {
+    const status = String(targetData[i][9] || "").trim();
+    const normContent = normalizeText(String(targetData[i][4]));
+    if (status !== "" && normContent && !processedContentMap[normContent]) {
+      processedContentMap[normContent] = `提出作業シート ${startRow + i}行目`;
+    }
+  }
+
+  const overWordRows = [];   // 単語数オーバーの行
+  const duplicateRows = [];  // 本文重複の行
+
   let processCount = 0;
 
   for (let i = 0; i < targetData.length; i++) {
@@ -319,7 +348,26 @@ function checkSubmitter() {
     }
 
     const wordCount = content === "" ? 0 : content.split(/\s+/).length;
-    sheet.getRange(startRow + i, 8).setValue(wordCount);
+    const wordCell = sheet.getRange(startRow + i, 8);
+    wordCell.setValue(wordCount);
+
+    // ★追加：単語数が上限以上なら H列を赤色に（再実行時に解消していれば色を戻す）
+    if (wordCount >= WORD_LIMIT) {
+      wordCell.setBackground(ALERT_COLOR);
+      overWordRows.push(`${startRow + i}行目（${wordCount}語）`);
+    } else {
+      wordCell.setBackground(null);
+    }
+
+    // ★追加：本文が処理済の行と同一なら E列を赤色に（再実行時に解消していれば色を戻す）
+    const contentCell = sheet.getRange(startRow + i, 5);
+    const normContent = normalizeText(content);
+    if (normContent && processedContentMap[normContent]) {
+      contentCell.setBackground(ALERT_COLOR);
+      duplicateRows.push(`${startRow + i}行目（${processedContentMap[normContent]}と同一）`);
+    } else {
+      contentCell.setBackground(null);
+    }
 
     let currentCount = "";
 
@@ -345,7 +393,15 @@ function checkSubmitter() {
 
     processCount++;
   }
-  SpreadsheetApp.getUi().alert(`提出者チェックおよび各種自動入力が完了しました（対象: ${processCount}件）。`);
+  // ★追加：警告対象の行があればポップアップで通知
+  let message = `提出者チェックおよび各種自動入力が完了しました（対象: ${processCount}件）。`;
+  if (overWordRows.length > 0) {
+    message += `\n\n【単語数が${WORD_LIMIT}語以上】\n` + overWordRows.join('\n');
+  }
+  if (duplicateRows.length > 0) {
+    message += `\n\n【処理済の本文と同一】\n` + duplicateRows.join('\n');
+  }
+  SpreadsheetApp.getUi().alert(message);
 }
 
 // --------------------------------------------------
@@ -450,7 +506,9 @@ function exportToGoogleDocs() {
       email,
       fileName,
       targetMonth,
-      sysDateTime  // ★変更箇所：日時（時分秒つき）を書き込み
+      sysDateTime, // ★変更箇所：日時（時分秒つき）を書き込み
+      "",          // H列：生徒返送日（返送メール送信時に記入）
+      content      // ★追加：I列に本文を保存（提出者チェックの重複判定に使用）
     ]);
 
     const lastRowHistory = historySheet.getLastRow();
@@ -873,6 +931,131 @@ function sendBatchEmailWithAttachments() {
 
   // ★最後にまとめてポップアップを表示
   ui.alert('一括添付メール送信 実行結果', logMessages.join('\n'), ui.ButtonSet.OK);
+}
+
+// --------------------------------------------------
+// 添削結果返送メール送信
+// --------------------------------------------------
+// ★統合：別ファイルにあった関数をこちらに移動
+function sendEmailByFileNameMatch() {
+  const ui = SpreadsheetApp.getUi();
+  const logMessages = [];
+
+  // ==========================================
+  // 1. 設定項目
+  // ==========================================
+  const SPREADSHEET_ID = '16P2gg95DMgpTnvNJ3mUsOwBafb73DNQw_guvtKcnANY';
+  const SHEET_NAME = '提出履歴'; // 検索対象のシート名
+  const SOURCE_FOLDER_ID = '1xykPgEPaVtAqe45H7jL07U9m31IykcA5'; // 添削済ファイルの返却フォルダ
+  const DEST_FOLDER_ID = '1WUrQEmc1KLx7Sps74b_a1y3qDkJkErqL';   // 返送後の移動先フォルダ
+
+  const MAIL_SUBJECT = '【自動送信】NOVA英語日記添削サービス　添削結果のご送付';
+  const MAIL_BODY_BASE = '自動送信メールです。\nNOVA英語ライティングコースの添削結果を送付いたします。\n添付ファイルをご確認ください。\n\nよろしくお願いいたします。';
+  const SENDER_NAME = 'NOVA英語日記添削サービス';
+
+  // ==========================================
+  // 2. スプレッドシートデータの取得
+  // ==========================================
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    ui.alert(`「${SHEET_NAME}」シートが見つかりません。`);
+    return;
+  }
+  const dataList = sheet.getDataRange().getValues();
+  // dataList[i][2] -> C列 (氏名)
+  // dataList[i][3] -> D列 (メールアドレス)
+  // dataList[i][4] -> E列 (ファイル名)
+  // dataList[i][7] -> H列 (生徒返送日)
+
+  // ==========================================
+  // 3. フォルダ内のファイル取得と送信処理
+  // ==========================================
+  const sourceFolder = DriveApp.getFolderById(SOURCE_FOLDER_ID);
+  const destFolder = DriveApp.getFolderById(DEST_FOLDER_ID);
+  const files = sourceFolder.getFiles();
+
+  if (!files.hasNext()) {
+    ui.alert('お知らせ', '返却フォルダにファイルが存在しません。', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Googleドキュメントの.docx変換APIを叩くためのトークンを取得
+  const oauthToken = ScriptApp.getOAuthToken();
+  let sentCount = 0;
+
+  while (files.hasNext()) {
+    const file = files.next();
+    const fileName = file.getName();
+    // ★修正：返却ファイルは「〇〇.docx」の場合があるため、拡張子を除いた名前で照合する
+    const baseName = getBaseName(fileName);
+    let matchedRowIndex = -1;
+
+    // スプレッドシートのE列（インデックス4）を検索（1行目はヘッダー）
+    for (let i = 1; i < dataList.length; i++) {
+      if (String(dataList[i][4]).trim() === baseName) {
+        matchedRowIndex = i;
+        break; // 最初に見つかった行を対象とする
+      }
+    }
+
+    if (matchedRowIndex === -1) {
+      logMessages.push(`・スキップ: [${fileName}] と一致するファイル名が提出履歴E列にありません。`);
+      continue;
+    }
+
+    const recipientName = dataList[matchedRowIndex][2]; // C列
+    const emailAddress = String(dataList[matchedRowIndex][3]).trim(); // D列
+
+    if (!emailAddress) {
+      logMessages.push(`・スキップ: [${fileName}] は見つかりましたが、D列(メールアドレス)が空欄です。`);
+      continue;
+    }
+
+    try {
+      let attachment;
+
+      // 対象ファイルがGoogleドキュメントの場合は.docxに変換して添付
+      if (file.getMimeType() === MimeType.GOOGLE_DOCS) {
+        const exportUrl = `https://docs.google.com/document/d/${file.getId()}/export?format=docx`;
+        const response = UrlFetchApp.fetch(exportUrl, {
+          headers: { 'Authorization': 'Bearer ' + oauthToken },
+          muteHttpExceptions: true
+        });
+
+        if (response.getResponseCode() !== 200) {
+          throw new Error('.docx変換APIの呼び出しに失敗しました。');
+        }
+
+        attachment = response.getBlob().setName(baseName + '.docx');
+      } else {
+        attachment = file.getBlob();
+      }
+
+      // 宛名とベース本文を結合して、メール本文を作成
+      const namePrefix = recipientName ? String(recipientName) + ' 様\n\n' : '関係者各位\n\n';
+      const mailBody = namePrefix + MAIL_BODY_BASE;
+
+      MailApp.sendEmail(emailAddress, MAIL_SUBJECT, mailBody, {
+        attachments: [attachment],
+        name: SENDER_NAME
+      });
+
+      // 送信日時をH列（生徒返送日）に書き込み → 集計で黄色表示に使用
+      sheet.getRange(matchedRowIndex + 1, 8).setValue(new Date());
+
+      // 送信完了後、ファイルを別フォルダに移動
+      file.moveTo(destFolder);
+
+      sentCount++;
+      logMessages.push(`・送信完了: [${fileName}] → ${emailAddress}`);
+
+    } catch (error) {
+      logMessages.push(`・送信エラー: [${fileName}] ${error.message}`);
+    }
+  }
+
+  ui.alert('添削結果返送メール送信 実行結果', `送信件数: ${sentCount} 件\n\n` + logMessages.join('\n'), ui.ButtonSet.OK);
 }
 
 /**
