@@ -1,0 +1,3 @@
+# clasp の認証情報（絶対にコミットしない）
+.clasprc.json
+node_modules/

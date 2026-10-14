@@ -1,0 +1,4 @@
+# clasp push の対象外にするファイル
+README.md
+.clasp.json
+.claspignore
