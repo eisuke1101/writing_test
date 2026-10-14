@@ -3,7 +3,10 @@
 `index.html` のフォームから呼び出している Apps Script のソースを管理するディレクトリです。
 [clasp](https://github.com/google/clasp) でスクリプトエディタと同期します。
 
+- プロジェクト名: `english-writing-export-batch`（スプレッドシートにバインドされたスクリプト）
 - スクリプトID: `1TeXL5VXuJ6IzLXwN3QYNL1lPsx7tWxlwJCGC0aC8ZPjmOUBapqbZ-lrJ`
+- Webアプリのデプロイ ID（`index.html` の `gasUrl` で使用中）:
+  `AKfycbyZI_HixcbDBdU6BqVpoAf1dKxD2NUmdYhGrlw0o15oUCVseQLenH0wit5RpizsoBjX`
 
 ## 初回セットアップ
 
@@ -28,8 +31,8 @@ git add . && git commit -m "Pull GAS source"
 cd gas
 clasp push
 # Webアプリの公開URLを変えずに新しいバージョンを公開する場合
-clasp deployments                   # 既存のデプロイIDを確認
-clasp deploy -i <デプロイID> -d "説明"
+# （-i を付けないと新しいデプロイ＝新しいURLが作られ、index.html の書き換えが必要になる）
+clasp deploy -i AKfycbyZI_HixcbDBdU6BqVpoAf1dKxD2NUmdYhGrlw0o15oUCVseQLenH0wit5RpizsoBjX -d "説明"
 ```
 
 ## 注意
