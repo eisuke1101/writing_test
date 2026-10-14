@@ -1207,7 +1207,7 @@ function getBaseName(fileName) {
 function normalizeText(text) {
   if (!text) return null;
   // \s, 全角スペースの他、見えない文字（ゼロ幅スペースなど）も除去
-  return text.replace(/[\s　​-‍﻿]+/g, "");
+  return text.replace(/[\s\u3000\u200B-\u200D\uFEFF]+/g, "");
 }
 
 /**
