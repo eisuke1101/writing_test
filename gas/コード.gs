@@ -509,7 +509,7 @@ function checkSubmitter() {
     if (master.error) {
       limitStatus = `判定不可（${master.error}）`;
     } else if (email === "" || !info) {
-      limitStatus = "判定不可（マスタ未登録）";
+      limitStatus = "判定不可（メールアドレス未登録）";
     } else {
       sheet.getRange(rowNo, COL_WORK.KANRI_NO).setValue(info.kanriNo);
       sheet.getRange(rowNo, COL_WORK.ID).setNumberFormat('@').setValue(info.id);
