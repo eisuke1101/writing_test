@@ -4,8 +4,9 @@ function onOpen() {
   ui.createMenu('【添削依頼】')
     .addItem('１．回答インポート', 'importAnswers')
     .addItem('２．提出者チェック', 'checkSubmitter')
-    .addItem('３．ファイル出力実行', 'exportToGoogleDocs')
-    .addItem('４．添削依頼メール送信', 'sendBatchEmailWithAttachments')
+    .addItem('３．回数超過メール送信', 'sendLimitExceededMail')
+    .addItem('４．ファイル出力実行', 'exportToGoogleDocs')
+    .addItem('５．添削依頼メール送信', 'sendBatchEmailWithAttachments')
     .addToUi();
   ui.createMenu('【受講者に返送】')
     .addItem('１．ファイルチェック', 'compareFolders')
@@ -119,7 +120,7 @@ function importAnswers() {
     return;
   }
 
-  // ★追加：M列の見出しが空なら設定
+  // ★追加：L列の見出しが空なら設定
   ensureHeader(targetSheet, COL_WORK.SUBMITTED_AT, "提出日時");
 
   // 処理対象シートの最終行を取得し、その次の行から追記開始
@@ -202,7 +203,7 @@ function importAnswers() {
       targetSheet.getRange(targetCurrentRow, COL_WORK.EMAIL).setValue(email);     // D列：メールアドレス
       targetSheet.getRange(targetCurrentRow, COL_WORK.CONTENT).setValue(content); // E列：本文
 
-      // ★追加：提出日時（M列）と、提出日時の月から求めた対象月（F列）を書き込む
+      // ★追加：提出日時（L列）と、提出日時の月から求めた対象月（F列）を書き込む
       // 例：10/31 23:00 の提出を 11/1 に処理しても対象月は「202610」になる
       if (submittedAt instanceof Date) {
         targetSheet.getRange(targetCurrentRow, COL_WORK.SUBMITTED_AT).setValue(submittedAt);
@@ -239,10 +240,11 @@ const COL_WORK = {
   FILE_NAME: 9,     // I：ファイル名
   OUTPUT: 10,       // J：出力（済）
   UNITS: 11,        // K：回数分
-  LIMIT_STATUS: 12, // L：上限判定
-  SUBMITTED_AT: 13  // M：提出日時
+  SUBMITTED_AT: 12, // L：提出日時
+  LIMIT_STATUS: 13, // M：上限判定
+  LIMIT_MAIL_AT: 14 // N：回数超過メール送信日時
 };
-const WORK_COLS = 13;
+const WORK_COLS = 14;
 
 // 提出履歴の列番号
 const COL_HIST = {
@@ -441,8 +443,9 @@ function checkSubmitter() {
 
   // 見出しが空なら設定
   ensureHeader(sheet, COL_WORK.UNITS, "回数分");
-  ensureHeader(sheet, COL_WORK.LIMIT_STATUS, "上限判定");
   ensureHeader(sheet, COL_WORK.SUBMITTED_AT, "提出日時");
+  ensureHeader(sheet, COL_WORK.LIMIT_STATUS, "上限判定");
+  ensureHeader(sheet, COL_WORK.LIMIT_MAIL_AT, "超過メール送信日時");
 
   // 色の定義
   const LIMIT_NG_COLOR = "#f4cccc"; // 上限超過・判定不可：行全体を薄い赤
@@ -471,6 +474,10 @@ function checkSubmitter() {
     // J列（出力）が空欄でない（すでに「済」「対象外」などが入っている）場合は処理をスキップ
     const outputStatus = String(rowData[COL_WORK.OUTPUT - 1] || "").trim();
     if (outputStatus !== "") {
+      continue;
+    }
+    // ★追加：回数超過メール送信済み（N列に日時あり）の行は受付終了として再判定しない
+    if (String(rowData[COL_WORK.LIMIT_MAIL_AT - 1] || "").trim() !== "") {
       continue;
     }
 
@@ -574,7 +581,8 @@ function checkSubmitter() {
   // 要確認・エラーの行を先頭に表示し、見落としを防ぐ
   const notices = [];
   if (limitNgRows.length > 0) {
-    notices.push(`■ エラー：上限超過・判定不可（行を薄い赤）※ファイル出力されません ${limitNgRows.length}件\n` + limitNgRows.join('\n'));
+    notices.push(`■ エラー：上限超過・判定不可（行を薄い赤）※ファイル出力されません ${limitNgRows.length}件\n` + limitNgRows.join('\n')
+      + (limitNgRows.some(r => r.indexOf("上限超過") !== -1) ? '\n→ 上限超過の行は「３．回数超過メール送信」で提出者に通知できます' : ''));
   }
   if (duplicateRows.length > 0) {
     notices.push(`■ エラー：処理済の本文と同一（E列を赤） ${duplicateRows.length}件\n` + duplicateRows.join('\n'));
@@ -590,6 +598,126 @@ function checkSubmitter() {
   } else {
     ui.alert(summary);
   }
+}
+
+// --------------------------------------------------
+// 回数超過メール送信
+// --------------------------------------------------
+// ★追加：上限判定（M列）が「上限超過」で、まだ通知していない（N列が空欄）行の提出者へ、
+// 提出を受け付けなかった旨のメールを一括送信し、N列に送信日時を記録する
+function sendLimitExceededMail() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const tz = ss.getSpreadsheetTimeZone();
+  const sheet = ss.getSheetByName("提出作業シート");
+
+  if (!sheet) {
+    ui.alert("「提出作業シート」が見つかりません。シート名を確認してください。");
+    return;
+  }
+  const startRow = 2;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < startRow) {
+    ui.alert("送信対象の行がありません。");
+    return;
+  }
+
+  // ==========================================
+  // 1. 設定項目（★暫定の文面です。必要に応じて変更してください）
+  // ==========================================
+  const SENDER_NAME = 'NOVA英語日記添削サービス';
+  const MAIL_SUBJECT = '【NOVA英語日記添削サービス】ご提出回数の上限によりお受付できませんでした';
+  // 本文の差し込み：{name} 氏名 / {submittedAt} 提出日時 / {month} 対象月 / {limit} 月の上限回数
+  const MAIL_BODY_TEMPLATE =
+    '{name} 様\n\n'
+    + 'いつもNOVA英語ライティングコースをご利用いただき、ありがとうございます。\n\n'
+    + '{submittedAt} にご提出いただいた英語日記につきまして、\n'
+    + '{month}のご提出回数が、ご契約プランの上限（月{limit}回）に達しているため、\n'
+    + '誠に恐れ入りますが、今回のご提出はお受付できませんでした。\n\n'
+    + '翌月以降に改めてご提出いただけますよう、お願い申し上げます。\n'
+    + 'ご不明な点がございましたら、お問い合わせください。\n\n'
+    + '※本メールは送信専用のアドレスから自動送信しています。\n\n'
+    + 'NOVA英語日記添削サービス';
+
+  ensureHeader(sheet, COL_WORK.LIMIT_MAIL_AT, "超過メール送信日時");
+
+  // ==========================================
+  // 2. 送信対象の抽出
+  // ==========================================
+  const data = sheet.getRange(startRow, 1, lastRow - startRow + 1, WORK_COLS).getValues();
+  const targets = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const outputStatus = String(row[COL_WORK.OUTPUT - 1] || "").trim();
+    const limitStatus = String(row[COL_WORK.LIMIT_STATUS - 1] || "").trim();
+    const mailSentAt = String(row[COL_WORK.LIMIT_MAIL_AT - 1] || "").trim();
+
+    if (outputStatus !== "") continue;                  // 出力済・対象外
+    if (limitStatus.indexOf("上限超過") !== 0) continue; // 上限超過の行のみ
+    if (mailSentAt !== "") continue;                    // 送信済み
+
+    targets.push({ rowNo: startRow + i, row: row });
+  }
+
+  if (targets.length === 0) {
+    ui.alert("回数超過メールの送信対象（上限超過で未送信の行）はありません。");
+    return;
+  }
+
+  // ==========================================
+  // 3. 送信前の確認
+  // ==========================================
+  const preview = targets.map(t =>
+    `${t.rowNo}行目：${t.row[COL_WORK.NAME - 1]}（${t.row[COL_WORK.EMAIL - 1]}）`
+  ).join('\n');
+  const answer = ui.alert(
+    '回数超過メール送信',
+    `以下の${targets.length}件に、上限超過のため受け付けなかった旨のメールを送信します。よろしいですか？\n\n${preview}`,
+    ui.ButtonSet.YES_NO
+  );
+  if (answer !== ui.Button.YES) {
+    ui.alert("送信を中止しました。");
+    return;
+  }
+
+  // ==========================================
+  // 4. 送信と記録
+  // ==========================================
+  const results = [];
+  let sentCount = 0;
+
+  for (const t of targets) {
+    const row = t.row;
+    const name = String(row[COL_WORK.NAME - 1] || "").trim();
+    const email = String(row[COL_WORK.EMAIL - 1] || "").trim();
+    const month = String(row[COL_WORK.MONTH - 1] || "").trim();
+    const submittedAt = row[COL_WORK.SUBMITTED_AT - 1];
+    const limitStatus = String(row[COL_WORK.LIMIT_STATUS - 1] || "");
+
+    if (email === "") {
+      results.push(`・${t.rowNo}行目：メールアドレスが空欄のため送信しませんでした`);
+      continue;
+    }
+
+    const limitMatch = limitStatus.match(/月(\d+)回まで/);
+    const body = MAIL_BODY_TEMPLATE
+      .replace('{name}', name || 'ご利用者')
+      .replace('{submittedAt}', (submittedAt instanceof Date) ? Utilities.formatDate(submittedAt, tz, "yyyy年M月d日 HH:mm") : '先日')
+      .replace('{month}', month.length === 6 ? `${month.substring(0, 4)}年${Number(month.substring(4, 6))}月` : '今月')
+      .replace('{limit}', limitMatch ? limitMatch[1] : '-');
+
+    try {
+      MailApp.sendEmail(email, MAIL_SUBJECT, body, { name: SENDER_NAME });
+      sheet.getRange(t.rowNo, COL_WORK.LIMIT_MAIL_AT).setValue(new Date());
+      sentCount++;
+      results.push(`・${t.rowNo}行目：送信完了 → ${email}`);
+    } catch (e) {
+      results.push(`・${t.rowNo}行目：送信エラー（${e.message}）`);
+    }
+  }
+
+  ui.alert('回数超過メール送信 実行結果', `送信件数: ${sentCount} 件\n\n` + results.join('\n'), ui.ButtonSet.OK);
 }
 
 // --------------------------------------------------
@@ -619,7 +747,7 @@ function exportToGoogleDocs() {
   if (!masterSs) return;
   const masterCache = {};
 
-  // ★変更：M列（提出日時）まで取得
+  // ★変更：N列（回数超過メール送信日時）まで取得
   const dataRange = sheet.getRange(startRow, 1, lastRow - startRow + 1, WORK_COLS);
   const data = dataRange.getValues();
 
@@ -671,6 +799,7 @@ function exportToGoogleDocs() {
     const submittedAt = row[COL_WORK.SUBMITTED_AT - 1];
 
     if (outputStatus !== "") continue; // 「済」「対象外」などは対象外
+    if (String(row[COL_WORK.LIMIT_MAIL_AT - 1] || "").trim() !== "") continue; // 回数超過メール送信済みは対象外
 
     // ★追加：本文が読み込みエラー文の場合は出力しない（添削者にエラー文が送られるのを防ぐ）
     if (String(content).trim().indexOf("【エラー】") === 0) {
