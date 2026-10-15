@@ -553,7 +553,7 @@ function checkSubmitter() {
     sheet.getRange(rowNo, COL_WORK.COUNT).setValue(currentCount);
     sheet.getRange(rowNo, COL_WORK.LIMIT_STATUS).setValue(limitStatus);
 
-    // 上限超過・判定不可：行全体を薄い赤にし、L列を太字に
+    // 上限超過・判定不可：行全体を薄い赤にし、M列を太字に
     if (limitStatus !== LIMIT_OK) {
       sheet.getRange(rowNo, 1, 1, WORK_COLS).setBackground(LIMIT_NG_COLOR);
       sheet.getRange(rowNo, COL_WORK.LIMIT_STATUS).setFontWeight("bold");
