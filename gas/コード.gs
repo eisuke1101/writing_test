@@ -683,7 +683,7 @@ function exportToGoogleDocs() {
 
     if (master.error || !info || limit === null || previousCount + units > limit) {
       const reason = master.error ? `判定不可（${master.error}）`
-        : !info ? "判定不可（マスタ未登録）"
+        : !info ? "判定不可（管理番号未登録）"
         : limit === null ? `判定不可（O列の値が不明：「${info.planCode}」）`
         : `超過（上限${limit}回／使用済${previousCount}回／今回×${units}）`;
       sheet.getRange(rowNo, COL_WORK.LIMIT_STATUS).setValue(reason + "※出力時再判定");
