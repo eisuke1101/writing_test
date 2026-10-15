@@ -628,12 +628,17 @@ function sendLimitExceededMail() {
   const SENDER_NAME = 'NOVA英語日記添削サービス';
   const MAIL_SUBJECT = '【NOVA英語日記添削サービス】ご提出回数の上限によりお受付できませんでした';
   // 本文の差し込み：{name} 氏名 / {submittedAt} 提出日時 / {month} 対象月 / {limit} 月の上限回数
+  //                 {used} 今月の提出済み回数 / {units} 今回の回数分 / {unitsNote} 複数回分の場合の補足
   const MAIL_BODY_TEMPLATE =
     '{name} 様\n\n'
     + 'いつもNOVA英語ライティングコースをご利用いただき、ありがとうございます。\n\n'
     + '{submittedAt} にご提出いただいた英語日記につきまして、\n'
-    + '{month}のご提出回数が、ご契約プランの上限（月{limit}回）に達しているため、\n'
+    + '今回のご提出を含めると、{month}のご提出回数がご契約プランの上限を超えてしまうため、\n'
     + '誠に恐れ入りますが、今回のご提出はお受付できませんでした。\n\n'
+    + '【{month}のご提出状況】\n'
+    + '・ご契約プランの上限：月{limit}回まで\n'
+    + '・今月のご提出済み回数：{used}回\n'
+    + '・今回のご提出：{units}回分{unitsNote}\n\n'
     + '翌月以降に改めてご提出いただけますよう、お願い申し上げます。\n'
     + 'ご不明な点がございましたら、お問い合わせください。\n\n'
     + '※本メールは送信専用のアドレスから自動送信しています。\n\n'
@@ -700,12 +705,22 @@ function sendLimitExceededMail() {
       continue;
     }
 
+    // M列「上限超過（月4回まで／今月提出済3回／今回2回分）」から各数値を取り出す
     const limitMatch = limitStatus.match(/月(\d+)回まで/);
+    const usedMatch = limitStatus.match(/今月提出済(\d+)回/);
+    const unitsMatch = limitStatus.match(/今回(\d+)回分/);
+    const units = unitsMatch ? Number(unitsMatch[1]) : 0;
+    const unitsNote = units >= 2 ? '（216語以上のご提出は、文字数に応じて複数回分として数えます）' : '';
+    const monthLabel = month.length === 6 ? `${month.substring(0, 4)}年${Number(month.substring(4, 6))}月` : '今月';
+
     const body = MAIL_BODY_TEMPLATE
       .replace('{name}', name || 'ご利用者')
       .replace('{submittedAt}', (submittedAt instanceof Date) ? Utilities.formatDate(submittedAt, tz, "yyyy年M月d日 HH:mm") : '先日')
-      .replace('{month}', month.length === 6 ? `${month.substring(0, 4)}年${Number(month.substring(4, 6))}月` : '今月')
-      .replace('{limit}', limitMatch ? limitMatch[1] : '-');
+      .replace(/\{month\}/g, monthLabel)
+      .replace('{limit}', limitMatch ? limitMatch[1] : '-')
+      .replace('{used}', usedMatch ? usedMatch[1] : '-')
+      .replace('{units}', unitsMatch ? unitsMatch[1] : '-')
+      .replace('{unitsNote}', unitsNote);
 
     try {
       MailApp.sendEmail(email, MAIL_SUBJECT, body, { name: SENDER_NAME });
