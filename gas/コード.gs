@@ -500,6 +500,11 @@ function checkSubmitter() {
     // 行の色・太字を一旦リセット（再実行時に解消済みの色を戻すため）
     sheet.getRange(rowNo, 1, 1, WORK_COLS).setBackground(null).setFontWeight("normal");
 
+    // ★追加：本文が空、または回答インポート時の読み込みエラー文の場合は出力させない
+    const contentProblem = content === "" ? "本文が空です"
+      : content.indexOf("【エラー】") === 0 ? "本文の読み込みエラー：E列を確認してください"
+      : "";
+
     // ★追加：マスタ照合と上限判定
     let limitStatus = "";
     let currentCount = "";
@@ -520,7 +525,9 @@ function checkSubmitter() {
       currentCount = previousCount + 1; // G列は開始回（例：3回目〜4回目なら3）
 
       const limit = getMonthlyLimit(info.planCode, targetMonth);
-      if (limit === null) {
+      if (contentProblem) {
+        limitStatus = `判定不可（${contentProblem}）`;
+      } else if (limit === null) {
         limitStatus = `判定不可（受講プランが不明：O列「${info.planCode}」）`;
       } else if (previousCount + units > limit) {
         limitStatus = `上限超過（月${limit}回まで／今月提出済${previousCount}回／今回${units}回分）`;
@@ -664,6 +671,13 @@ function exportToGoogleDocs() {
     const submittedAt = row[COL_WORK.SUBMITTED_AT - 1];
 
     if (outputStatus !== "") continue; // 「済」「対象外」などは対象外
+
+    // ★追加：本文が読み込みエラー文の場合は出力しない（添削者にエラー文が送られるのを防ぐ）
+    if (String(content).trim().indexOf("【エラー】") === 0) {
+      skippedRows.push(`${rowNo}行目：判定不可（本文の読み込みエラー：E列を確認してください）`);
+      continue;
+    }
+
     if (id === "" || content === "" || targetMonth === "" || count === "") continue;
     // 単語数の上限は撤廃（複数回分の提出として出力する）
     if (wordCount === "" || isNaN(wordCount) || Number(wordCount) <= 0) continue;
@@ -743,7 +757,7 @@ function exportToGoogleDocs() {
 
   let message = `ドキュメントの出力および提出履歴の保存が完了しました（${processCount}件）。`;
   if (skippedRows.length > 0) {
-    message = `■ 上限判定により出力しなかった行 ${skippedRows.length}件\n` + skippedRows.join('\n') + '\n\n' + message;
+    message = `■ 出力しなかった行 ${skippedRows.length}件\n` + skippedRows.join('\n') + '\n\n' + message;
   }
   SpreadsheetApp.getUi().alert(message);
 }
@@ -1202,7 +1216,7 @@ function compareFolders() {
 
   var matchedFiles = [];
   var errorMessages = [];
-  var debugLog = []; // 一致しなかった場合の理由調査用
+  var correctedFiles = []; // ★変更：送付時から内容が変わっている（添削済み）ファイル名
 
   var ui = SpreadsheetApp.getUi();
   SpreadsheetApp.getActiveSpreadsheet().toast('ファイル比較を開始しました。しばらくお待ちください...', '処理中');
@@ -1234,15 +1248,15 @@ function compareFolders() {
           if (norm1 === norm2) {
             matchedFiles.push(file1.getName() + " (内容一致)");
           } else {
-            // 名前は同じだが内容が異なった場合、何が抽出されたかを記録
-            debugLog.push("【" + file1.getName() + "】\n フォルダ1: [" + norm1 + "]\n フォルダ2: [" + norm2 + "]");
+            // 名前は同じで内容が異なる＝添削済み（件数表示のためファイル名のみ記録）
+            correctedFiles.push(file1.getName());
           }
         }
       }
     }
   }
 
-  showPopupResult(matchedFiles, errorMessages, debugLog);
+  showPopupResult(matchedFiles, errorMessages, correctedFiles);
 }
 
 /**
@@ -1302,7 +1316,7 @@ function extractTextFromDocument(file, errorMessages) {
 /**
  * 結果をポップアップ表示
  */
-function showPopupResult(matchedFiles, errorMessages, debugLog) {
+function showPopupResult(matchedFiles, errorMessages, correctedFiles) {
   var ui = SpreadsheetApp.getUi();
 
   // エラーがあれば表示して終了
@@ -1316,11 +1330,11 @@ function showPopupResult(matchedFiles, errorMessages, debugLog) {
   } else {
     var msg = '送付時と内容が同じままのファイルはありませんでした。';
 
-    // 同名ファイルは見つかったが、テキスト内容の判定で弾かれた場合の理由を表示
-    if (debugLog.length > 0) {
-      msg += '\n\n【原因調査用データ】\n同名ファイルは見つかりましたが、以下の通り抽出されたテキストが異なっていました。\n\n' + debugLog.join('\n\n');
+    // ★変更：本文の一覧は表示せず、確認した件数のみ表示する
+    if (correctedFiles.length > 0) {
+      msg += '\n\n確認したファイル: ' + correctedFiles.length + '件（すべて送付時から内容が変更されています）';
     } else {
-      msg += '\n\n（比較対象となる同名のファイル自体が認識されていません）';
+      msg += '\n\n（送付済フォルダと返却フォルダに、同じ名前のファイルがありません）';
     }
 
     ui.alert('未添削の疑いがあるファイルはありません', msg, ui.ButtonSet.OK);
