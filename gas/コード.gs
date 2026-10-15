@@ -327,7 +327,7 @@ function loadMasterForMonth(masterSs, month, cache) {
   const masterSheet = masterSs.getSheetByName(sheetName);
 
   if (!masterSheet) {
-    result.error = `マスタに「${sheetName}」シートがありません`;
+    result.error = `参照先ファイルに「${sheetName}」シートがありません`;
   } else {
     const masterData = masterSheet.getDataRange().getValues();
     for (let i = 1; i < masterData.length; i++) {
@@ -369,7 +369,7 @@ function openMasterSpreadsheet(ss) {
   try {
     return SpreadsheetApp.openById(masterSpreadsheetId);
   } catch (e) {
-    SpreadsheetApp.getUi().alert("マスタースプレッドシートの読み込みに失敗しました。参照先シートA2のIDをご確認ください。");
+    SpreadsheetApp.getUi().alert("参照先ファイルを開けませんでした。「参照先」シートA2のIDを確認してください。");
     return null;
   }
 }
@@ -521,9 +521,9 @@ function checkSubmitter() {
 
       const limit = getMonthlyLimit(info.planCode, targetMonth);
       if (limit === null) {
-        limitStatus = `判定不可（O列の値が不明：「${info.planCode}」）`;
+        limitStatus = `判定不可（受講プランが不明：O列「${info.planCode}」）`;
       } else if (previousCount + units > limit) {
-        limitStatus = `超過（上限${limit}回／使用済${previousCount}回／今回×${units}）`;
+        limitStatus = `上限超過（月${limit}回まで／今月提出済${previousCount}回／今回${units}回分）`;
       } else {
         limitStatus = LIMIT_OK;
         // 上限内の提出のみ使用済み回数に加算（超過分は出力しないため加算しない）
@@ -684,9 +684,9 @@ function exportToGoogleDocs() {
     if (master.error || !info || limit === null || previousCount + units > limit) {
       const reason = master.error ? `判定不可（${master.error}）`
         : !info ? "判定不可（管理番号未登録）"
-        : limit === null ? `判定不可（O列の値が不明：「${info.planCode}」）`
-        : `超過（上限${limit}回／使用済${previousCount}回／今回×${units}）`;
-      sheet.getRange(rowNo, COL_WORK.LIMIT_STATUS).setValue(reason + "※出力時再判定");
+        : limit === null ? `判定不可（受講プランが不明：O列「${info.planCode}」）`
+        : `上限超過（月${limit}回まで／今月提出済${previousCount}回／今回${units}回分）`;
+      sheet.getRange(rowNo, COL_WORK.LIMIT_STATUS).setValue(reason + "（ファイル出力時に判定）");
       sheet.getRange(rowNo, 1, 1, WORK_COLS).setBackground("#f4cccc");
       skippedRows.push(`${rowNo}行目：${reason}`);
       continue;
@@ -833,7 +833,7 @@ function aggregateHistory() {
     const historyMap = monthMap[month];
     const summaryLastRow = summarySheet.getLastRow();
     if (summaryLastRow < 2) {
-      missingSheets.push(`${sheetName}（管理番号のレコードなし）`);
+      missingSheets.push(`${sheetName}（シートにデータがありません）`);
       continue;
     }
 
@@ -1312,9 +1312,9 @@ function showPopupResult(matchedFiles, errorMessages, debugLog) {
   }
 
   if (matchedFiles.length > 0) {
-    ui.alert('比較結果: 内容の一致あり', matchedFiles.join('\n'), ui.ButtonSet.OK);
+    ui.alert('未添削の可能性があるファイル（送付時と内容が同じ）', matchedFiles.join('\n'), ui.ButtonSet.OK);
   } else {
-    var msg = '内容が一致する同名ファイルは見つかりませんでした。';
+    var msg = '送付時と内容が同じままのファイルはありませんでした。';
 
     // 同名ファイルは見つかったが、テキスト内容の判定で弾かれた場合の理由を表示
     if (debugLog.length > 0) {
@@ -1323,6 +1323,6 @@ function showPopupResult(matchedFiles, errorMessages, debugLog) {
       msg += '\n\n（比較対象となる同名のファイル自体が認識されていません）';
     }
 
-    ui.alert('比較結果: 一致なし', msg, ui.ButtonSet.OK);
+    ui.alert('未添削の疑いがあるファイルはありません', msg, ui.ButtonSet.OK);
   }
 }
