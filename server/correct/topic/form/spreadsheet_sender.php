@@ -1,39 +1,25 @@
 <?php
 /**
- * 英語日記フォーム：スプレッドシート保存処理（mail.php から呼び出す）
+ * 英語日記フォーム：スプレッドシート保存処理
  *
- * mail.php がメールを送信できた直後に sendToSpreadsheet() を1回呼び出す。
- * 成功・失敗にかかわらず例外は投げないので、既存のメール送信処理は止まらない。
+ * mail_config_overwrite.php の overwrite_mail_after() から、最終送信でメールを送った後に1回呼ばれる。
+ * 成功・失敗にかかわらず例外は投げないので、既存のメール送信と完了画面への移動は止まらない。
  * 失敗した場合は error_log に記録して false を返す。
  *
  * 必要なもの：PHP 5.6 以上、curl 拡張、script.google.com への HTTPS 接続
- *
- * 呼び出し例（mail.php の、最終送信でメール送信が成功した直後）：
- *
- *   require_once __DIR__ . '/spreadsheet_sender.php';
- *   sendToSpreadsheet(
- *       array(
- *           'nameA'         => $_POST['nameA'],
- *           'school_number' => $_POST['school_number'],
- *           'tel'           => $_POST['tel'],
- *           'mail'          => $_POST['mail'],
- *           'submit_text'   => $_POST['submit_text'],
- *       ),
- *       $attachmentPath,      // 添付ファイルの一時保存先（なければ null）
- *       $attachmentName,      // 利用者がアップロードしたときのファイル名
- *       $attachmentMimeType   // 添付ファイルの MIME タイプ
- *   );
- *
- * 入力値や添付ファイルの変数名は mail.php の作りに合わせて置き換える。
  */
 
-// GAS Webアプリの URL（環境変数 SPREADSHEET_GAS_URL があればそちらを使う）
-define('SPREADSHEET_GAS_URL', getenv('SPREADSHEET_GAS_URL') ?: 'https://script.google.com/macros/s/AKfycbwMUEX8ac_-0rQ_zZg1he8EVLjHMxdEx4Q81bUtbJuJ7jepN0uZaZb9Hk_gku2Kxyxg/exec');
+// GAS Webアプリの URL（先に define されていれば、そちらを使う）
+if (!defined('SPREADSHEET_GAS_URL')) {
+    define('SPREADSHEET_GAS_URL', getenv('SPREADSHEET_GAS_URL') ?: 'https://script.google.com/macros/s/AKfycbwMUEX8ac_-0rQ_zZg1he8EVLjHMxdEx4Q81bUtbJuJ7jepN0uZaZb9Hk_gku2Kxyxg/exec');
+}
 
-// GAS 側と共有する合言葉。ソースに直接書かず、環境変数などから渡す
-define('SPREADSHEET_GAS_SECRET', getenv('SPREADSHEET_GAS_SECRET') ?: '');
+// GAS 側（スクリプトプロパティ FORM_SECRET）と同じ合言葉。環境変数か、先に define して渡す
+if (!defined('SPREADSHEET_GAS_SECRET')) {
+    define('SPREADSHEET_GAS_SECRET', getenv('SPREADSHEET_GAS_SECRET') ?: '');
+}
 
-define('SPREADSHEET_TIMEOUT_SEC', 15);               // 最大待ち時間
+define('SPREADSHEET_TIMEOUT_SEC', 15);                  // 最大待ち時間
 define('SPREADSHEET_MAX_FILE_BYTES', 10 * 1024 * 1024); // 添付ファイルの上限（10MB）
 
 /**

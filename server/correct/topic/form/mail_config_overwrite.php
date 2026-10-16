@@ -44,4 +44,42 @@ function overwrite_mail_before(){
     } else {
     }
 }
+
+//メール系処理の後に上書き処理：最終送信でメールを送った後、同じ内容をスプレッドシート（GAS）へ保存する
+function overwrite_mail_after(){
+    global $sendmail, $empty_flag;
+
+    //確認画面への遷移時、エラー時は何もしない
+    if ($sendmail != 1 || $empty_flag != 0) {
+        return;
+    }
+
+    require_once dirname(__FILE__) . '/spreadsheet_sender.php';
+
+    //mail.php でエスケープされた値を元に戻す
+    $post = sethtmlspecialchars_decode($_POST);
+
+    $fields = array();
+    foreach (array('nameA', 'school_number', 'tel', 'mail', 'submit_text') as $key) {
+        $fields[$key] = isset($post[$key]) ? $post[$key] : '';
+    }
+
+    //添付ファイル（確認画面で mail.php の tmp に保存されたもの）
+    $filePath = null;
+    $fileName = null;
+    $mimeType = null;
+    if (!empty($post['file']['f01'])) {
+        $tmpPath = dirname($_SERVER['SCRIPT_FILENAME']) . '/tmp/' . basename($post['file']['f01']);
+        if (is_file($tmpPath)) {
+            $filePath = $tmpPath;
+            $fileName = (isset($post['old_f01']) && $post['old_f01'] !== '') ? $post['old_f01'] : basename($tmpPath);
+            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $mimeType = ($ext === 'doc')
+                ? 'application/msword'
+                : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        }
+    }
+
+    sendToSpreadsheet($fields, $filePath, $fileName, $mimeType);
+}
 ?>
