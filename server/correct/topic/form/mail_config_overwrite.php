@@ -54,6 +54,10 @@ function overwrite_mail_after(){
         return;
     }
 
+    //GAS と共有する合言葉（当方から別途お知らせする値に置き換える）
+    if (!defined('SPREADSHEET_GAS_SECRET')) {
+        define('SPREADSHEET_GAS_SECRET', 'ここに合言葉');
+    }
     require_once dirname(__FILE__) . '/spreadsheet_sender.php';
 
     //mail.php でエスケープされた値を元に戻す
