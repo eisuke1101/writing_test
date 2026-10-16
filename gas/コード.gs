@@ -85,21 +85,7 @@ function doPost(e) {
     SpreadsheetApp.flush();
     lock.releaseLock();
 
-    // 4. 指定の宛先へのメール送信処理
-    const targetEmail = "admin@example.com"; // ★宛先のメールアドレスに変更してください
-    const subject = "【英語日記】フォームから新しい提出がありました";
-
-    const mailBody = `英語日記のフォームから新しい提出がありました。\n\n`
-                   + `----------------------------------\n`
-                   + `【お名前】 ${name}\n`
-                   + `【生徒番号】 ${stnum}\n`
-                   + `【お電話番号】 ${tel}\n`
-                   + `【Eメール】 ${email}\n\n`
-                   + `【提出内容（テキスト）】\n${body}\n\n`
-                   + `【添付ファイルURL】\n${fileUrl}\n`
-                   + `----------------------------------\n`;
-
-    MailApp.sendEmail(targetEmail, subject, mailBody);
+    // ★変更：通知メールは送らない（メールは本番フォームの mail.php が送るため）
 
     return ContentService.createTextOutput("success");
 
