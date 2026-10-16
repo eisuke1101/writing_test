@@ -20,18 +20,44 @@ function onOpen() {
 // HTMLフォームからの受信（Webアプリ）
 // --------------------------------------------------
 function doPost(e) {
+  const lock = LockService.getScriptLock();
   try {
-    // 1. HTML側からテキストデータを受け取る
+    // ★追加：合言葉のチェック（スクリプトプロパティ FORM_SECRET を設定したときだけ有効）
+    const expectedSecret = PropertiesService.getScriptProperties().getProperty("FORM_SECRET");
+    if (expectedSecret && e.parameter.secret !== expectedSecret) {
+      console.warn("合言葉が一致しない送信を拒否しました");
+      return ContentService.createTextOutput("forbidden");
+    }
+
+    // 1. 送信元からテキストデータを受け取る
     const name  = e.parameter.nameA;
     const stnum = e.parameter.school_number;
     const tel   = e.parameter.tel;
     const email = e.parameter.mail;
     const body  = e.parameter.submit_text;
+    const submissionId = e.parameter.submissionId || ""; // ★追加：重複防止用の送信ID
 
-    // 2. HTML側からファイルデータを受け取る
+    // 2. 送信元からファイルデータを受け取る
     const fileName = e.parameter.fileName;
     const mimeType = e.parameter.mimeType;
     const fileData = e.parameter.fileData;
+
+    const sheetName = "フォームの回答_英語日記";
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+    if (!sheet) {
+      throw new Error(`「${sheetName}」シートが見つかりません。`);
+    }
+
+    // ★追加：同時に届いた送信が重ならないよう、記録が終わるまで排他する
+    lock.waitLock(30000);
+
+    // ★追加：同じ送信IDの行がすでにあれば、何もせずに終える（I列 = 送信ID）
+    if (submissionId) {
+      const found = sheet.getRange("I:I").createTextFinder(submissionId).matchEntireCell(true).findNext();
+      if (found) {
+        return ContentService.createTextOutput("duplicate");
+      }
+    }
 
     let fileUrl = "添付なし";
 
@@ -53,38 +79,22 @@ function doPost(e) {
       }
     }
 
-    // 3. スプレッドシートへの記録（末尾にファイルのURLを追加）
-    // ★修正：getActiveSheet()はWebアプリから呼ぶと左端のシートになるため、シート名で指定
-    const sheetName = "フォームの回答_英語日記";
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-    if (!sheet) {
-      throw new Error(`「${sheetName}」シートが見つかりません。`);
-    }
-    // A:日時 B:メール C:氏名 D:本文 E:生徒番号 F:電話番号 G:ファイルURL（H:インポート状況は空欄）
-    sheet.appendRow([new Date(), email, name, body, stnum, tel, fileUrl]);
+    // 3. スプレッドシートへの記録
+    // A:日時 B:メール C:氏名 D:本文 E:生徒番号 F:電話番号 G:ファイルURL H:インポート状況（空欄） I:送信ID
+    sheet.appendRow([new Date(), email, name, body, stnum, tel, fileUrl, "", submissionId]);
+    SpreadsheetApp.flush();
+    lock.releaseLock();
 
-    // 4. 指定の宛先へのメール送信処理
-    const targetEmail = "admin@example.com"; // ★宛先のメールアドレスに変更してください
-    const subject = "【英語日記】フォームから新しい提出がありました";
-
-    const mailBody = `英語日記のフォームから新しい提出がありました。\n\n`
-                   + `----------------------------------\n`
-                   + `【お名前】 ${name}\n`
-                   + `【生徒番号】 ${stnum}\n`
-                   + `【お電話番号】 ${tel}\n`
-                   + `【Eメール】 ${email}\n\n`
-                   + `【提出内容（テキスト）】\n${body}\n\n`
-                   + `【添付ファイルURL】\n${fileUrl}\n`
-                   + `----------------------------------\n`;
-
-    MailApp.sendEmail(targetEmail, subject, mailBody);
+    // ★変更：通知メールは送らない（メールは本番フォームの mail.php が送るため）
 
     return ContentService.createTextOutput("success");
 
   } catch (err) {
-    // ★追加：エラー内容をGASエディタの「実行数」ログに残す
+    // エラー内容をGASエディタの「実行数」ログに残す
     console.error(err);
     return ContentService.createTextOutput("error: " + err.message);
+  } finally {
+    lock.releaseLock(); // ロックを持っていなければ何もしない
   }
 }
 
