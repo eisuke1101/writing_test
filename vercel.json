@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/correct/common/mail_v4.0.0/mail.php", "destination": "/api/mail" }
+  ]
+}

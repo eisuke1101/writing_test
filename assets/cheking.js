@@ -1,6 +1,10 @@
 //ポスト
+var spreadsheetSending = false; // スプレッドシート保存処理（追加）：二重送信防止
 function onClickNext(){
+    if(spreadsheetSending){return false;} // スプレッドシート保存処理（追加）
     if(InputCheck()==false){return false;}
+    spreadsheetSending = true; // スプレッドシート保存処理（追加）
+    sendToSpreadsheet(document.inpost).then(function () { // スプレッドシート保存処理（追加）
     with(document.inpost){
         formSaveFunc();//⇒cookie設定
 //        action = '/biz/common/mail_v2.0/mail.php';
@@ -9,6 +13,7 @@ function onClickNext(){
         method = "post";
         submit();
     }
+    }); // スプレッドシート保存処理（追加）
 }
 
 function onClickSend(){
