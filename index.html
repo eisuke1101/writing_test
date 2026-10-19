@@ -577,16 +577,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                           <input type="checkbox" name="checkboxDoui" id="checkboxDoui" value="同意する">「プライバシーポリシー」に同意します。
                         </label>
                       </p>-->
-                      <!--
                       <div id="submit-area" class="mg20 tac">
                         <input type="button" class="btn" value=" 送信内容確認画面へ " onclick="onClickNext()">
                       </div>
-						-->
-						<div id="submit-area" class="mg20 tac">
-						  <input type="submit" id="submit-btn" class="btn" value=" 送信内容確認画面へ ">
-						</div>
-						<!-- 送信完了メッセージを表示するエリア -->
-						<div id="message-box" style="margin-top: 15px; font-weight: bold; display: none; text-align: center;"></div>
 						
                     </div>
                   <!-- // infoTb -->
@@ -711,82 +704,3 @@ function set_form_val(a){a=document.querySelectorAll("form input");for(var c=nul
   <script>var script=document.createElement("script");script.defer=!0;script.src="https://static.jp.zeals.ai/conversion/conversion_v2.js";document.getElementsByTagName("head")[0].appendChild(script);</script>
 
 </div><img src="./assets/adsct(2)" height="1" width="1" fetchpriority="high" style="display: none;"><img src="./assets/adsct(3)" height="1" width="1" fetchpriority="high" style="display: none;"></body><!--提出方法Aのバリテーション--></html>
-
-<!-- ここから追加 -->
-<!--
-    const gasUrl = "https://script.google.com/macros/s/AKfycbwMUEX8ac_-0rQ_zZg1he8EVLjHMxdEx4Q81bUtbJuJ7jepN0uZaZb9Hk_gku2Kxyxg/exec"; 
-    -->
-<script>
-$(function() {$('#submit-btn').on('click', function(e) {
-        e.preventDefault();
-
-        const form = document.getElementById('inpost');
-        const $btn =$(this);
-        const $msgBox =$('#message-box');
-        const gasUrl = "https://script.google.com/macros/s/AKfycbwMUEX8ac_-0rQ_zZg1he8EVLjHMxdEx4Q81bUtbJuJ7jepN0uZaZb9Hk_gku2Kxyxg/exec"; 
-
-        $btn.prop('disabled', true).val('送信中...');
-        $msgBox.hide();
-
-        const formData = new FormData(form);
-        const params = new URLSearchParams();
-        
-        // ファイル要素の取得
-        const fileInput = document.getElementById('selectFile');
-        const file = fileInput.files[0];
-
-        // テキストデータのセット
-        for (const pair of formData.entries()) {
-            if (pair[1] instanceof File) continue; // ファイルは別途処理
-            params.append(pair[0], pair[1]);
-        }
-
-        // ファイルが選択されている場合の処理
-        if (file) {
-            // 容量チェック (2MB = 2,097,152バイト)
-            if (file.size > 2 * 1024 * 1024) {
-                alert("ファイル容量は2MB以下にしてください。");
-                $btn.prop('disabled', false).val(' 送信内容確認画面へ ');
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                // ファイルデータをBase64文字列に変換してパラメータに追加
-                const data = e.target.result.split(',');
-                params.append('fileName', file.name);
-                params.append('mimeType', data[0].match(/:(.*?);/)[1]);
-                params.append('fileData', data[1]);
-                
-                sendData(params);
-            };
-            reader.readAsDataURL(file);
-        } else {
-            // ファイルがない場合はそのまま送信
-            sendData(params);
-        }
-
-        // GASへの送信処理
-        function sendData(paramsToSend) {
-            fetch(gasUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: paramsToSend
-            })
-            .then(() => {
-                form.reset();
-                // 画面上の「ファイル選択名」の表示もリセット
-                $('#fileLabel .val').text('ファイル未選択'); 
-                $msgBox.css('color', 'green').text('送信が完了しました。').show();
-            })
-            .catch(error => {
-                console.error('Fetch Error:', error);
-                $msgBox.css('color', 'red').text('送信エラーが発生しました。').show();
-            })
-            .finally(() => {
-                $btn.prop('disabled', false).val(' 送信内容確認画面へ ');
-            });
-        }
-    });
-});
-</script>
