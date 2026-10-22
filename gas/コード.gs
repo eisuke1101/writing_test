@@ -733,7 +733,8 @@ function sendLimitExceededMail() {
       .replace('{unitsNote}', unitsNote);
 
     try {
-      MailApp.sendEmail(email, MAIL_SUBJECT, body, { name: SENDER_NAME });
+      // ★変更：テキストメールは送信時に長い行が自動改行されるため、HTML版の本文も付けて送信
+      MailApp.sendEmail(email, MAIL_SUBJECT, body, { name: SENDER_NAME, htmlBody: textToHtmlMail(body) });
       sheet.getRange(t.rowNo, COL_WORK.LIMIT_MAIL_AT).setValue(new Date());
       sentCount++;
       results.push(`・${t.rowNo}行目：送信完了 → ${email}`);
@@ -1354,9 +1355,11 @@ function sendEmailByFileNameMatch() {
       const studentName = String(recipientName || "").trim() || "受講者";
       const mailBody = MAIL_BODY_TEMPLATE.replace('{name}', studentName);
 
+      // ★変更：テキストメールは送信時に長い行が自動改行されるため、HTML版の本文も付けて送信
       MailApp.sendEmail(emailAddress, MAIL_SUBJECT, mailBody, {
         attachments: [attachment],
-        name: SENDER_NAME
+        name: SENDER_NAME,
+        htmlBody: textToHtmlMail(mailBody)
       });
 
       // 送信日時をH列（生徒返送日）に書き込み → 集計で黄色表示に使用
@@ -1455,6 +1458,24 @@ function isTargetFile(file) {
   if (name.indexOf('.doc') !== -1) return true; // .doc や .docx が含まれていれば対象とする
 
   return false;
+}
+
+/**
+ * ★追加：テキストのメール本文を、改行位置・字下げをそのまま保ったHTMLに変換する
+ * （テキストメールは送信時に約76桁で自動改行されるため、HTMLメールとして送ってソースどおりの改行にする）
+ */
+function textToHtmlMail(text) {
+  const escaped = String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const lines = escaped.split("\n").map(line =>
+    // 行頭・連続する半角スペースは &nbsp; にして字下げを保持
+    line.replace(/^ +| {2,}/g, m => "&nbsp;".repeat(m.length))
+  );
+  return '<div style="font-family: \'MS PGothic\', \'Hiragino Kaku Gothic ProN\', Meiryo, sans-serif; font-size: 14px; line-height: 1.6;">'
+    + lines.join("<br>\n")
+    + "</div>";
 }
 
 /**
