@@ -1237,7 +1237,38 @@ function sendEmailByFileNameMatch() {
   const DEST_FOLDER_ID = '1WUrQEmc1KLx7Sps74b_a1y3qDkJkErqL';   // 返送後の移動先フォルダ
 
   const MAIL_SUBJECT = '【自動送信】NOVA英語日記添削サービス　添削結果のご送付';
-  const MAIL_BODY_BASE = '自動送信メールです。\nNOVA英語ライティングコースの添削結果を送付いたします。\n添付ファイルをご確認ください。\n\nよろしくお願いいたします。';
+  // ★変更：本文を差し替え（1行目の「{name}様」に受講者名を差し込む）
+  const MAIL_BODY_TEMPLATE =
+    '{name}様\n'
+    + '\n'
+    + 'ご提出いただき、誠にありがとうございました。\n'
+    + '\n'
+    + '添削させていただきましたので、ご確認いただければ幸いです。\n'
+    + '引き続き、経験豊富な校閲者が迅速、丁寧に添削させていただきます。\n'
+    + '\n'
+    + '《添削の表示方法》\n'
+    + '\n'
+    + '英語ライティングコースでは、ワードファイルの校閲機能を用いて、\n'
+    + '添削した箇所（変更・追記・削除など）が赤字で表示されるように返送しております。\n'
+    + '\n'
+    + '添削箇所の表示は、各自でご利用されているパソコンにインストールされているワードファイルの設定に依存しており、\n'
+    + '添削箇所がそのままでは詳しく表示されない場合、下記の手順で、設定をご変更ください。\n'
+    + '\n'
+    + '1.    ワードファイルの「校閲」タブで、「シンプルな変更履歴／コメント」を\n'
+    + '      「すべての変更履歴／コメント」に変更します。\n'
+    + '2.    それでもうまく表示されない場合、「変更履歴とコメントの表示」で表示させたい項目にチェックを付けると、\n'
+    + '      それに基づく添削履歴が表示されます。\n'
+    + '\n'
+    + '次回のご提出もお待ちしております！\n'
+    + '\n'
+    + '――――――――――――――――――――\n'
+    + '※本メールは自動送信メールです。\n'
+    + '本メールへの返信は受け付けておりません。\n'
+    + 'お問い合わせ等がございましたら、下記連絡先までご連絡くださいますようお願いいたします。\n'
+    + '\n'
+    + '英語ライティングコース担当\n'
+    + 'メールアドレス：tensaku@nova.co.jp\n'
+    + '――――――――――――――――――――';
   const SENDER_NAME = 'NOVA英語日記添削サービス';
 
   // ==========================================
@@ -1319,9 +1350,9 @@ function sendEmailByFileNameMatch() {
         attachment = file.getBlob();
       }
 
-      // 宛名とベース本文を結合して、メール本文を作成
-      const namePrefix = recipientName ? String(recipientName) + ' 様\n\n' : '関係者各位\n\n';
-      const mailBody = namePrefix + MAIL_BODY_BASE;
+      // ★変更：提出履歴C列の受講者名を1行目に差し込んでメール本文を作成
+      const studentName = String(recipientName || "").trim() || "受講者";
+      const mailBody = MAIL_BODY_TEMPLATE.replace('{name}', studentName);
 
       MailApp.sendEmail(emailAddress, MAIL_SUBJECT, mailBody, {
         attachments: [attachment],
