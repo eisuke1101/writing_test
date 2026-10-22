@@ -733,7 +733,8 @@ function sendLimitExceededMail() {
       .replace('{unitsNote}', unitsNote);
 
     try {
-      MailApp.sendEmail(email, MAIL_SUBJECT, body, { name: SENDER_NAME });
+      // ★変更：テキストメールは送信時に長い行が自動改行されるため、HTML版の本文も付けて送信
+      MailApp.sendEmail(email, MAIL_SUBJECT, body, { name: SENDER_NAME, htmlBody: textToHtmlMail(body) });
       sheet.getRange(t.rowNo, COL_WORK.LIMIT_MAIL_AT).setValue(new Date());
       sentCount++;
       results.push(`・${t.rowNo}行目：送信完了 → ${email}`);
@@ -1237,7 +1238,38 @@ function sendEmailByFileNameMatch() {
   const DEST_FOLDER_ID = '1WUrQEmc1KLx7Sps74b_a1y3qDkJkErqL';   // 返送後の移動先フォルダ
 
   const MAIL_SUBJECT = '【自動送信】NOVA英語日記添削サービス　添削結果のご送付';
-  const MAIL_BODY_BASE = '自動送信メールです。\nNOVA英語ライティングコースの添削結果を送付いたします。\n添付ファイルをご確認ください。\n\nよろしくお願いいたします。';
+  // ★変更：本文を差し替え（1行目の「{name}様」に受講者名を差し込む）
+  const MAIL_BODY_TEMPLATE =
+    '{name}様\n'
+    + '\n'
+    + 'ご提出いただき、誠にありがとうございました。\n'
+    + '\n'
+    + '添削させていただきましたので、ご確認いただければ幸いです。\n'
+    + '引き続き、経験豊富な校閲者が迅速、丁寧に添削させていただきます。\n'
+    + '\n'
+    + '《添削の表示方法》\n'
+    + '\n'
+    + '英語ライティングコースでは、ワードファイルの校閲機能を用いて、\n'
+    + '添削した箇所（変更・追記・削除など）が赤字で表示されるように返送しております。\n'
+    + '\n'
+    + '添削箇所の表示は、各自でご利用されているパソコンにインストールされているワードファイルの設定に依存しており、\n'
+    + '添削箇所がそのままでは詳しく表示されない場合、下記の手順で、設定をご変更ください。\n'
+    + '\n'
+    + '1.    ワードファイルの「校閲」タブで、「シンプルな変更履歴／コメント」を\n'
+    + '      「すべての変更履歴／コメント」に変更します。\n'
+    + '2.    それでもうまく表示されない場合、「変更履歴とコメントの表示」で表示させたい項目にチェックを付けると、\n'
+    + '      それに基づく添削履歴が表示されます。\n'
+    + '\n'
+    + '次回のご提出もお待ちしております！\n'
+    + '\n'
+    + '――――――――――――――――――――\n'
+    + '※本メールは自動送信メールです。\n'
+    + '本メールへの返信は受け付けておりません。\n'
+    + 'お問い合わせ等がございましたら、下記連絡先までご連絡くださいますようお願いいたします。\n'
+    + '\n'
+    + '英語ライティングコース担当\n'
+    + 'メールアドレス：tensaku@nova.co.jp\n'
+    + '――――――――――――――――――――';
   const SENDER_NAME = 'NOVA英語日記添削サービス';
 
   // ==========================================
@@ -1319,13 +1351,15 @@ function sendEmailByFileNameMatch() {
         attachment = file.getBlob();
       }
 
-      // 宛名とベース本文を結合して、メール本文を作成
-      const namePrefix = recipientName ? String(recipientName) + ' 様\n\n' : '関係者各位\n\n';
-      const mailBody = namePrefix + MAIL_BODY_BASE;
+      // ★変更：提出履歴C列の受講者名を1行目に差し込んでメール本文を作成
+      const studentName = String(recipientName || "").trim() || "受講者";
+      const mailBody = MAIL_BODY_TEMPLATE.replace('{name}', studentName);
 
+      // ★変更：テキストメールは送信時に長い行が自動改行されるため、HTML版の本文も付けて送信
       MailApp.sendEmail(emailAddress, MAIL_SUBJECT, mailBody, {
         attachments: [attachment],
-        name: SENDER_NAME
+        name: SENDER_NAME,
+        htmlBody: textToHtmlMail(mailBody)
       });
 
       // 送信日時をH列（生徒返送日）に書き込み → 集計で黄色表示に使用
@@ -1424,6 +1458,24 @@ function isTargetFile(file) {
   if (name.indexOf('.doc') !== -1) return true; // .doc や .docx が含まれていれば対象とする
 
   return false;
+}
+
+/**
+ * ★追加：テキストのメール本文を、改行位置・字下げをそのまま保ったHTMLに変換する
+ * （テキストメールは送信時に約76桁で自動改行されるため、HTMLメールとして送ってソースどおりの改行にする）
+ */
+function textToHtmlMail(text) {
+  const escaped = String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const lines = escaped.split("\n").map(line =>
+    // 行頭・連続する半角スペースは &nbsp; にして字下げを保持
+    line.replace(/^ +| {2,}/g, m => "&nbsp;".repeat(m.length))
+  );
+  return '<div style="font-family: \'MS PGothic\', \'Hiragino Kaku Gothic ProN\', Meiryo, sans-serif; font-size: 14px; line-height: 1.6;">'
+    + lines.join("<br>\n")
+    + "</div>";
 }
 
 /**
