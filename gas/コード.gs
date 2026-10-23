@@ -14,6 +14,7 @@ function onOpen() {
     .addToUi();
   ui.createMenu('【集計】')
     .addItem('集計', 'aggregateHistory') // ★新規追加
+    .addItem('手作業分の移行（運用開始時に1回だけ）', 'migrateManualHistory') // ★追加：移行が済んだら削除する
     .addToUi();
 }
 
@@ -349,6 +350,7 @@ function loadMasterForMonth(masterSs, month, cache) {
         name: row[2],                         // C列
         id: String(row[4]).padStart(8, '0'),  // E列 (8桁0埋め)
         planCode: String(row[14]).trim(),     // O列：月の上限（4- / 8- / E- / T）
+        email: [row[6], row[7], row[8]].map(v => String(v).trim()).find(v => v !== "") || "", // ★追加：G〜I列の最初のメールアドレス（手作業分の移行で使用）
         fileName: row[20]                     // U列
       };
       // G・H・I列のいずれかのメールアドレスで一致すればよいよう、3列すべてをキーとして登録
